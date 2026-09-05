@@ -8,10 +8,21 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+        sans: ['"Nunito"', '"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
         serif: ['"Playfair Display"', 'Georgia', 'serif'],
       },
       colors: {
+        conn: {
+          deep: '#0B3B42',        // Tinta verdosa oscura (texto)
+          teal: '#12A5B5',        // Verde azulado protagonista
+          tealDark: '#0E7E8C',    // Teal profundo (iconos, hero)
+          tealDeep: '#0A5B66',    // Hero degradado
+          aqua: '#E9F4F4',        // Fondo página
+          mist: '#DFF1F2',        // Relleno suave (medallones, chips)
+          muted: '#5E8B91',       // Texto atenuado verdoso
+          amber: '#F5A623',       // Acento importante (En Hoy)
+          amberSoft: '#FCEFD4',
+        },
         medito: {
           bg: '#F0F4F8',             // Azul papel sereno
           'bg-alt': '#EBF2FA',         // Azul brisa suave

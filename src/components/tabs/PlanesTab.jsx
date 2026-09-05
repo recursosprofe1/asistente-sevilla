@@ -1,10 +1,9 @@
 ﻿import React, { useState, useEffect, useRef } from "react";
 import {
-  Heart, EyeOff, RotateCcw, Check, RefreshCw, Sun,
-  Trash2, Sparkles, MapPin, Clock, ChevronDown, ChevronUp, ExternalLink
-} from "lucide-react";
-import { SereneCompass } from "../illustrations/MeditoVectors";
-import { PlanCategoryIcon } from "../illustrations/PlanCategoryIcons";
+  ConnCorazon, ConnOjoOff, ConnRestaurar, ConnCheck, ConnSync, ConnSol,
+  ConnPapelera, ConnPin, ConnReloj, ConnChevron, ConnBrujula,
+} from "../illustrations/ConnIcons";
+import { ConnCategoryIcon, ConnCategoryGlyph } from "../illustrations/ConnIcons";
 import { db, discardPlan, restorePlan, getFeedMeta } from "../../db";
 import { syncPlansFromCloud } from "../../services/feedService";
 import {
@@ -25,7 +24,7 @@ import { getTodayKeyMadrid } from "../../utils/time";
 
 export const TRAVEL_OPTIONS = [
   { value: 30, label: "30 min", sub: "Cercano" },
-  { value: 45, label: "45 min", sub: "Metropolitano" },
+  { value: 45, label: "45 min", sub: "Metro" },
   { value: 60, label: "1 hora", sub: "Provincia" },
   { value: UNLIMITED_TRAVEL, label: "Todo", sub: "Sin límite" }
 ];
@@ -53,11 +52,7 @@ function PlanCard({
   const category = withNormalizedCategory(plan);
 
   return (
-    <article
-      className={`bg-white rounded-3xl overflow-hidden shadow-sm border transition-all ${
-        isInterested && !showDiscarded ? "border-blue-200" : "border-slate-100"
-      }`}
-    >
+    <article className="conn-card overflow-hidden transition-all">
       {/* Cabecera siempre visible */}
       <button
         type="button"
@@ -65,33 +60,33 @@ function PlanCard({
         aria-expanded={isExpanded}
         aria-controls={`plan-detalle-${plan.id}`}
         aria-label={`${isExpanded ? 'Ocultar' : 'Ver'} detalle de ${plan.title}`}
-        className="w-full text-left focus-visible:outline-2 focus-visible:outline-blue-600"
+        className="w-full text-left focus-visible:outline-2 focus-visible:outline-conn-tealDark"
       >
         <div className="flex items-center gap-3 p-4">
-          <PlanCategoryIcon category={category} size="sm" />
+          <ConnCategoryIcon category={category} size="sm" />
 
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-bold text-slate-900 leading-snug line-clamp-2">
+            <h3 className="font-theme-title text-[15px] font-black text-conn-deep leading-snug line-clamp-2">
               {plan.title}
             </h3>
             {(plan.summary || (plan.longDescription && category !== 'Cine')) && (
-              <p className="text-[11px] text-slate-500 leading-snug line-clamp-2 mt-1">
+              <p className="text-[11px] font-semibold text-conn-muted leading-snug line-clamp-2 mt-1">
                 {plan.summary || String(plan.longDescription).slice(0, 140)}
               </p>
             )}
-            <div className="flex items-center gap-1 mt-1 text-[11px] text-slate-400">
-              <MapPin className="w-3 h-3" />
+            <div className="flex items-center gap-1 mt-1.5 text-[11px] font-bold text-conn-muted">
+              <ConnPin className="w-3 h-3" />
               <span className="truncate">{plan.venue}{plan.municipality ? ` · ${plan.municipality}` : ""}</span>
             </div>
-            {!showDiscarded && (
+            {!showDiscarded && (isInterested || isForToday) && (
               <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                 {isInterested && (
-                  <span className="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-black text-red-500 bg-red-50 px-2 py-0.5 rounded-full">
                     Favorito
                   </span>
                 )}
                 {isForToday && (
-                  <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-black text-conn-deep bg-conn-amberSoft px-2 py-0.5 rounded-full">
                     En Hoy
                   </span>
                 )}
@@ -101,44 +96,39 @@ function PlanCard({
 
           <div className="flex flex-col items-end gap-2 flex-shrink-0">
             {showDiscarded ? (
-              <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+              <span className="text-[10px] font-bold text-conn-muted bg-conn-aqua px-2 py-0.5 rounded-full">
                 {diasRestantes === 0 ? "Hoy" : `${diasRestantes}d`}
               </span>
             ) : (
-              <>
-                {plan.travelMinutes != null ? (
-                  <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                    {plan.travelMinutes} min
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                    Distancia por calcular
-                  </span>
-                )}
-              </>
+              plan.travelMinutes != null ? (
+                <span className="text-[11px] font-black text-conn-tealDark bg-conn-mist px-2 py-0.5 rounded-full">
+                  {plan.travelMinutes} min
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold text-conn-muted bg-conn-aqua px-2 py-0.5 rounded-full">
+                  Sin distancia
+                </span>
+              )
             )}
-            {isExpanded
-              ? <ChevronUp className="w-3.5 h-3.5 text-slate-300" />
-              : <ChevronDown className="w-3.5 h-3.5 text-slate-300" />
-            }
+            <ConnChevron arriba={isExpanded} className="w-3.5 h-3.5 text-conn-muted/60" />
           </div>
         </div>
 
         {plan.priceText && (
           <div className="px-4 pb-3 -mt-1">
-            <span className="text-[11px] font-semibold text-slate-400">{plan.priceText}</span>
+            <span className="text-[11px] font-bold text-conn-muted">{plan.priceText}</span>
           </div>
         )}
 
         {Array.isArray(plan.sesiones) && plan.sesiones.length > 0 && (
           <div className="px-4 pb-3 -mt-1 flex items-center gap-1.5 flex-wrap" aria-label={`Sesiones de ${plan.title}`}>
             {plan.sesiones.slice(0, 4).map((s, i) => (
-              <span key={i} className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full">
+              <span key={i} className="text-[11px] font-black text-conn-tealDark bg-conn-mist px-2 py-0.5 rounded-full">
                 {s}
               </span>
             ))}
             {plan.sesiones.length > 4 && (
-              <span className="text-[10px] font-semibold text-slate-400">+{plan.sesiones.length - 4}</span>
+              <span className="text-[10px] font-bold text-conn-muted">+{plan.sesiones.length - 4}</span>
             )}
           </div>
         )}
@@ -153,20 +143,20 @@ function PlanCard({
             aria-pressed={isInterested}
             className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-red-50 active:scale-90 transition-all"
           >
-            <Heart className={`w-4 h-4 ${isInterested ? "fill-red-500 text-red-500" : "text-slate-300"}`} />
+            <ConnCorazon lleno={isInterested} className={`w-5 h-5 ${isInterested ? "text-red-500" : "text-conn-muted/50"}`} />
           </button>
           <button
             onClick={(e) => onToggleForToday(e, plan)}
             type="button"
             aria-label={isForToday ? `Quitar ${plan.title} de Hoy` : `Añadir ${plan.title} a Hoy`}
             aria-pressed={isForToday}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all active:scale-95 min-h-[44px] ${
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black transition-all active:scale-95 min-h-[44px] ${
               isForToday
-                ? "bg-orange-100 text-orange-700 border border-orange-200"
-                : "bg-slate-100 text-slate-600 hover:bg-orange-50 hover:text-orange-700"
+                ? "bg-conn-amberSoft text-conn-deep"
+                : "bg-conn-mist text-conn-tealDark"
             }`}
           >
-            <Sun className={`w-3.5 h-3.5 ${isForToday ? "text-orange-500" : ""}`} />
+            <ConnSol className="w-3.5 h-3.5" />
             {isForToday ? "En Hoy" : "Añadir a Hoy"}
           </button>
         </div>
@@ -174,10 +164,10 @@ function PlanCard({
 
       {/* Detalle expandido */}
       {isExpanded && (
-        <div id={`plan-detalle-${plan.id}`} className="border-t border-slate-50 px-4 py-3 space-y-3">
+        <div id={`plan-detalle-${plan.id}`} className="border-t border-conn-aqua px-4 py-3 space-y-3">
           {plan.startsAt && (
-            <p className="text-[11px] text-slate-500 flex items-center gap-1.5">
-              <Clock className="w-3 h-3 text-slate-400" />
+            <p className="text-[11px] font-bold text-conn-muted flex items-center gap-1.5">
+              <ConnReloj className="w-3 h-3" />
               {plan.startsAt}
             </p>
           )}
@@ -186,26 +176,26 @@ function PlanCard({
             category === "Cine" ? (
               <CineMovies longDescription={plan.longDescription} />
             ) : (
-              <p className="text-xs text-slate-600 leading-relaxed">{plan.longDescription}</p>
+              <p className="text-xs text-conn-deep/80 leading-relaxed">{plan.longDescription}</p>
             )
           )}
 
-          <PlanWhy text={plan.whyMatch} tone="blue" />
+          <PlanWhy text={plan.whyMatch} tone="teal" />
           <PlanSourceLink url={plan.sourceUrl} />
 
-          <div className="flex items-center justify-between pt-1 border-t border-slate-50">
+          <div className="flex items-center justify-between pt-1 border-t border-conn-aqua">
             {showDiscarded ? (
               <button onClick={(e) => onRestore(e, plan.id)} type="button"
                 aria-label={`Restaurar ${plan.title}`}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold bg-blue-600 text-white active:scale-95 mx-auto min-h-[44px]">
-                <RotateCcw className="w-3.5 h-3.5" />
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black bg-conn-teal text-white active:scale-95 mx-auto min-h-[44px]">
+                <ConnRestaurar className="w-3.5 h-3.5" />
                 Restaurar
               </button>
             ) : (
               <button onClick={(e) => onDiscard(e, plan.id)} type="button"
                 aria-label={`Descartar ${plan.title}`}
-                className="flex items-center gap-1 px-3 py-2 rounded-full text-xs font-medium text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors min-h-[44px]">
-                <EyeOff className="w-3.5 h-3.5" />
+                className="flex items-center gap-1 px-3 py-2 rounded-full text-xs font-bold text-conn-muted hover:text-red-500 hover:bg-red-50 transition-colors min-h-[44px]">
+                <ConnOjoOff className="w-3.5 h-3.5" />
                 Descartar
               </button>
             )}
@@ -213,6 +203,25 @@ function PlanCard({
         </div>
       )}
     </article>
+  );
+}
+
+// ── Botón circular de categoría (estilo ejemplos) ──
+function CategoryCircle({ label, active, onClick, category }) {
+  return (
+    <button type="button" onClick={onClick} aria-pressed={active} className="conn-circle-btn">
+      <span className={`flex items-center justify-center w-12 h-12 rounded-full transition-all ${
+        active ? 'bg-conn-teal text-white scale-105' : 'bg-white text-conn-tealDark'
+      }`}
+        style={{ boxShadow: active
+          ? '0 8px 18px -6px rgba(18, 165, 181, 0.55)'
+          : '0 6px 14px -8px rgba(10, 91, 102, 0.30)' }}>
+        <ConnCategoryGlyph category={category} className="w-6 h-6" />
+      </span>
+      <span className={`text-[9px] leading-tight text-center font-black max-w-[64px] truncate ${active ? 'text-conn-deep' : 'text-conn-muted'}`}>
+        {label}
+      </span>
+    </button>
   );
 }
 
@@ -404,63 +413,67 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
   return (
     <div className="space-y-3 pb-28 pt-1">
       {/* Cabecera de estado */}
-      <div className="px-1 pt-1">
-        <h2 className="text-xl font-bold text-slate-900 leading-tight">Planes</h2>
-        <p className="text-xs text-slate-500 mt-1" role="status">
-          {showDiscarded
-            ? `${discardedPlans.length} en papelera · se purgan a los 7 días`
-            : `${sourceList.length} sugerencias · ~20 planes por categorías`}
-        </p>
-        <FeedStatusLine lastSyncedAt={feedMeta?.lastSyncedAt} stale={feedStale} />
-        {feedStale && (
-          <p className="text-[11px] text-amber-600 font-semibold mt-1" role="status">
-            El feed puede estar desactualizado. Sincroniza cuando tengas conexión.
-          </p>
-        )}
-        <details className="mt-2 bg-white rounded-2xl border border-slate-100 px-3 py-2">
-          <summary className="text-[11px] font-bold text-slate-500 cursor-pointer min-h-[44px] flex items-center">
-            Diagnóstico: {totalCount} en base · {plans.length} visibles · {discardedPlans.length} en papelera
-          </summary>
-          <div className="text-[11px] text-slate-500 space-y-1 pb-2 pt-1" role="status">
-            <p>Retirados del feed (ocultos): {staleCount}</p>
-            <p>Última sincronización: {feedMeta?.lastSyncedAt ? new Date(feedMeta.lastSyncedAt).toLocaleString('es-ES') : 'nunca'}</p>
-            <p>Generado por el feed: {feedMeta?.generatedAt || 'sin dato'}</p>
-            <p>Válido hasta: {feedMeta?.validUntil || 'sin dato'}</p>
-            <p>Hash del feed: {feedMeta?.feedHash ? String(feedMeta.feedHash).slice(0, 12) : 'sin dato'}</p>
-            <p>Versión de esquema: {feedMeta?.schemaVersion ?? 'sin dato'}</p>
+      <div className="conn-hero px-5 pt-5 pb-4 text-white">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h2 className="font-theme-title text-[22px] font-black leading-tight">Planes</h2>
+            <p className="text-[11px] font-bold text-white/85 mt-1" role="status">
+              {showDiscarded
+                ? `${discardedPlans.length} en papelera · se purgan a los 7 días`
+                : `${sourceList.length} sugerencias cerca de ti`}
+            </p>
           </div>
-        </details>
-      </div>
-
-      {/* Control de tiempo */}
-      <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs text-slate-500 leading-relaxed">
-            Selecciona el tiempo máximo que estás dispuesto a viajar.
-          </p>
-          <div className="flex items-center gap-1 ml-2">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             <button
               onClick={handleClearRemoteCache}
               type="button"
               title="Borrar caché remota (conserva favoritos, Hoy y papelera)"
               aria-label="Borrar caché remota, conserva favoritos, Hoy y papelera"
-              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-slate-300 hover:text-red-400 hover:bg-red-50 transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-full bg-white/20 text-white active:scale-95 transition-all"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <ConnPapelera className="w-4 h-4" />
             </button>
             <button
               onClick={handleSyncCloud}
               disabled={isSyncing}
               title="Sincronizar planes"
               aria-label="Sincronizar planes"
-              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm active:scale-95 transition-all disabled:opacity-60"
+              className="w-11 h-11 flex items-center justify-center rounded-full bg-white text-conn-tealDark active:scale-95 transition-all disabled:opacity-60"
+              style={{ boxShadow: '0 8px 18px -6px rgba(0, 0, 0, 0.30)' }}
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+              <ConnSync className={`w-5 h-5 ${isSyncing ? "animate-spin" : ""}`} />
             </button>
           </div>
         </div>
+        <FeedStatusLine lastSyncedAt={feedMeta?.lastSyncedAt} stale={feedStale} light />
+        {feedStale && (
+          <p className="text-[11px] text-conn-amber font-black mt-1" role="status">
+            El feed puede estar desactualizado. Sincroniza cuando tengas conexión.
+          </p>
+        )}
+      </div>
 
-        <div className="grid grid-cols-4 gap-2" role="group" aria-label="Tiempo máximo de desplazamiento">
+      <details className="bg-white rounded-3xl px-4 py-2.5 mx-1" style={{ boxShadow: '0 8px 20px -12px rgba(10, 91, 102, 0.25)' }}>
+        <summary className="text-[11px] font-black text-conn-muted cursor-pointer min-h-[40px] flex items-center">
+          Diagnóstico: {totalCount} en base · {plans.length} visibles · {discardedPlans.length} en papelera
+        </summary>
+        <div className="text-[11px] font-semibold text-conn-muted space-y-1 pb-2 pt-1" role="status">
+          <p>Retirados del feed (ocultos): {staleCount}</p>
+          <p>Última sincronización: {feedMeta?.lastSyncedAt ? new Date(feedMeta.lastSyncedAt).toLocaleString('es-ES') : 'nunca'}</p>
+          <p>Generado por el feed: {feedMeta?.generatedAt || 'sin dato'}</p>
+          <p>Válido hasta: {feedMeta?.validUntil || 'sin dato'}</p>
+          <p>Hash del feed: {feedMeta?.feedHash ? String(feedMeta.feedHash).slice(0, 12) : 'sin dato'}</p>
+          <p>Versión de esquema: {feedMeta?.schemaVersion ?? 'sin dato'}</p>
+        </div>
+      </details>
+
+      {/* Control de tiempo + filtros */}
+      <div className="conn-card p-4">
+        <p className="text-[11px] font-bold text-conn-muted leading-relaxed mb-2.5">
+          ¿Hasta dónde viajas hoy?
+        </p>
+
+        <div className="grid grid-cols-4 gap-1.5" role="group" aria-label="Tiempo máximo de desplazamiento">
           {TRAVEL_OPTIONS.map((opt) => {
             const isSelected = travelMinutes === opt.value;
             return (
@@ -469,12 +482,13 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
                 onClick={() => handleTimeChange(opt.value)}
                 type="button"
                 aria-pressed={isSelected}
-                className={`flex flex-col items-center py-2.5 rounded-2xl text-center transition-all duration-200 active:scale-95 min-h-[44px] ${
-                  isSelected ? "bg-blue-600 text-white shadow-sm scale-105" : "bg-slate-50 text-slate-500 border border-slate-200"
+                className={`flex flex-col items-center py-2 rounded-2xl text-center transition-all duration-200 active:scale-95 min-h-[44px] justify-center ${
+                  isSelected ? "bg-conn-teal text-white" : "bg-conn-aqua text-conn-muted"
                 }`}
+                style={isSelected ? { boxShadow: '0 8px 16px -8px rgba(18, 165, 181, 0.7)' } : undefined}
               >
-                <span className="text-xs font-bold leading-none">{opt.label}</span>
-                <span className={`text-[9px] mt-1 leading-none font-medium ${isSelected ? "text-blue-200" : "text-slate-400"}`}>
+                <span className="text-[11px] font-black leading-none">{opt.label}</span>
+                <span className={`text-[8px] mt-0.5 leading-none font-bold ${isSelected ? "text-white/85" : "text-conn-muted/70"}`}>
                   {opt.sub}
                 </span>
               </button>
@@ -482,18 +496,18 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
           })}
         </div>
 
-        {/* Filtros de vista */}
-        <div className="flex items-center gap-2 mt-3 flex-wrap" role="group" aria-label="Filtrar planes">
+        {/* Filtros de vista compactos */}
+        <div className="flex items-center gap-1.5 mt-2.5" role="group" aria-label="Filtrar planes">
           {FILTER_MODES.map((m) => (
             <button
               key={m.value}
               type="button"
               onClick={() => { setFilterMode(m.value); setShowDiscarded(false); }}
               aria-pressed={filterMode === m.value && !showDiscarded}
-              className={`px-3 py-2 rounded-full text-[11px] font-bold min-h-[44px] ${
+              className={`px-3 py-1.5 rounded-full text-[11px] font-black min-h-[36px] ${
                 filterMode === m.value && !showDiscarded
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-slate-100 text-slate-500'
+                  ? 'bg-conn-deep text-white'
+                  : 'bg-conn-aqua text-conn-muted'
               }`}
             >
               {m.label}
@@ -501,28 +515,30 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
           ))}
         </div>
 
-        {/* Filtro por categoría */}
+        {/* Filtro por categoría: círculos con icono */}
         {availableCategories.length > 1 && (
-          <div className="flex items-center gap-2 mt-2 overflow-x-auto pb-1" role="group" aria-label="Filtrar por categoría">
-            {['Todas', ...availableCategories].map((c) => (
-              <button
+          <div className="flex items-start gap-2 mt-3 overflow-x-auto pb-1 -mx-1 px-1" role="group" aria-label="Filtrar por categoría">
+            <CategoryCircle
+              label="Todas"
+              category="Varios"
+              active={activeCategory === 'Todas'}
+              onClick={() => setActiveCategory('Todas')}
+            />
+            {availableCategories.map((c) => (
+              <CategoryCircle
                 key={c}
-                type="button"
+                label={c.split(' ')[0]}
+                category={c}
+                active={activeCategory === c}
                 onClick={() => setActiveCategory(c)}
-                aria-pressed={activeCategory === c}
-                className={`px-3 py-2 rounded-full text-[11px] font-semibold whitespace-nowrap min-h-[44px] ${
-                  activeCategory === c ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-700'
-                }`}
-              >
-                {c}
-              </button>
+              />
             ))}
           </div>
         )}
 
         {discardedPlans.length > 0 && (
           <button onClick={() => setShowDiscarded(!showDiscarded)} type="button"
-            className="mt-3 w-full text-center text-[11px] font-semibold text-slate-400 hover:text-slate-600 transition-colors min-h-[44px]">
+            className="mt-2.5 w-full text-center text-[11px] font-bold text-conn-muted min-h-[36px]">
             {showDiscarded ? "Ver planes activos" : `Ver papelera (${discardedPlans.length})`}
           </button>
         )}
@@ -536,9 +552,9 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
             }}
             type="button"
             aria-pressed={showPrevious}
-            className="mt-2 w-full text-center text-[11px] font-semibold text-slate-400 hover:text-slate-600 transition-colors min-h-[44px]"
+            className="mt-1 w-full text-center text-[11px] font-bold text-conn-muted min-h-[36px]"
           >
-            {showPrevious ? "Ocultar anteriores" : `Mostrar anteriores retirados del feed (${staleCount})`}
+            {showPrevious ? "Ocultar anteriores" : `Anteriores retirados (${staleCount})`}
           </button>
         )}
 
@@ -546,7 +562,7 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
           onClick={handleResetAllForTesting}
           type="button"
           aria-label="Reset total de pruebas, borra todos los planes"
-          className="mt-2 w-full text-center text-[11px] font-semibold text-red-300 hover:text-red-500 transition-colors min-h-[44px]"
+          className="mt-1 w-full text-center text-[11px] font-bold text-red-300 min-h-[36px]"
         >
           Reset total de pruebas (borra todo)
         </button>
@@ -554,17 +570,17 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
 
       {/* Toast */}
       {toast && (
-        <div role="status" aria-live="polite" className="bg-slate-900 text-white text-xs px-4 py-2 rounded-full flex items-center gap-2 shadow-lg animate-fadeIn mx-1">
-          <Check className="w-3 h-3 text-emerald-400" />
+        <div role="status" aria-live="polite" className="bg-conn-deep text-white text-xs px-4 py-2 rounded-full flex items-center gap-2 shadow-lg animate-fadeIn mx-1">
+          <ConnCheck className="w-3 h-3 text-conn-amber" />
           <span>{toast}</span>
         </div>
       )}
 
       {loadError && (
         <div className="text-center py-8 px-4">
-          <p className="text-sm font-semibold text-slate-500 mb-1">No se pudieron cargar los planes</p>
-          <p className="text-xs text-slate-400 mb-4">{loadError}</p>
-          <button onClick={loadPlansFromDb} type="button" className="px-5 py-2 rounded-full text-xs font-semibold bg-blue-600 text-white min-h-[44px]">
+          <p className="text-sm font-black text-conn-deep mb-1">No se pudieron cargar los planes</p>
+          <p className="text-xs font-semibold text-conn-muted mb-4">{loadError}</p>
+          <button onClick={loadPlansFromDb} type="button" className="px-5 py-2 rounded-full text-xs font-black bg-conn-teal text-white min-h-[44px]">
             Reintentar
           </button>
         </div>
@@ -573,21 +589,23 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
       {/* Lista agrupada por categoría */}
       {!loadError && (sourceList.length === 0 ? (
         <div className="text-center py-12 px-4">
-          <SereneCompass className="w-10 h-10 mx-auto text-slate-200 mb-3" />
-          <p className="text-sm font-semibold text-slate-400 mb-1">
+          <span className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-conn-mist text-conn-tealDark mb-3">
+            <ConnBrujula className="w-7 h-7" />
+          </span>
+          <p className="font-theme-title text-[15px] font-black text-conn-deep mb-1">
             {showDiscarded ? "La papelera está vacía" : "No hay planes para este filtro"}
           </p>
-          <p className="text-xs text-slate-400 mb-4">
+          <p className="text-xs font-semibold text-conn-muted mb-4">
             {!showDiscarded ? "Prueba con otro radio, categoría o sincroniza el feed." : "Los descartados se purgan a los 7 días."}
           </p>
           {!showDiscarded && (
             <div className="flex items-center justify-center gap-2">
               <button onClick={() => { setActiveCategory('Todas'); setFilterMode('all'); handleTimeChange(UNLIMITED_TRAVEL); }}
                 type="button"
-                className="mt-2 px-5 py-2 rounded-full text-xs font-semibold bg-blue-600 text-white min-h-[44px]">
+                className="mt-2 px-5 py-2 rounded-full text-xs font-black bg-conn-teal text-white min-h-[44px]">
                 Ver todos
               </button>
-              <button onClick={handleSyncCloud} type="button" className="mt-2 px-5 py-2 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 min-h-[44px]">
+              <button onClick={handleSyncCloud} type="button" className="mt-2 px-5 py-2 rounded-full text-xs font-black bg-conn-mist text-conn-tealDark min-h-[44px]">
                 Sincronizar
               </button>
             </div>
@@ -599,14 +617,14 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
             <section key={cat} aria-label={`Categoría ${cat}`}>
               {/* Cabecera de categoria */}
               <div className="flex items-center gap-2.5 mb-2.5 px-1">
-                <PlanCategoryIcon category={cat} size="sm" />
+                <ConnCategoryIcon category={cat} size="sm" />
                 <div>
-                  <p className="text-sm font-black text-slate-800">{cat}</p>
-                  <p className="text-[10px] text-slate-400 font-semibold">
+                  <p className="font-theme-title text-[15px] font-black text-conn-deep">{cat}</p>
+                  <p className="text-[10px] text-conn-muted font-bold">
                     {grouped[cat].length} plan{grouped[cat].length === 1 ? "" : "es"}
                   </p>
                 </div>
-                <div className="flex-1 h-px bg-slate-200/80 ml-1" />
+                <div className="flex-1 h-px bg-conn-tealDark/15 ml-1" />
               </div>
 
               {/* Tarjetas de esta categoria */}
@@ -632,29 +650,29 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
           {showCineSection && (
             <section aria-label="Cartelera de cine de Sevilla">
               <div className="flex items-center gap-2.5 mb-2.5 px-1">
-                <PlanCategoryIcon category="Cine" size="sm" />
+                <ConnCategoryIcon category="Cine" size="sm" />
                 <div>
-                  <p className="text-sm font-black text-slate-800">Cartelera de cine de Sevilla</p>
-                  <p className="text-[10px] text-slate-400 font-semibold">
+                  <p className="font-theme-title text-[15px] font-black text-conn-deep">Cartelera de cine</p>
+                  <p className="text-[10px] text-conn-muted font-bold">
                     {cineVisible.length} peli{cineVisible.length === 1 ? "" : "s"}{activeCine !== 'Todos' ? ` en ${activeCine}` : ""}
                   </p>
                 </div>
-                <div className="flex-1 h-px bg-slate-200/80 ml-1" />
+                <div className="flex-1 h-px bg-conn-tealDark/15 ml-1" />
               </div>
 
               {cineNames.length > 1 && (
-                <div className="flex items-center gap-2 mb-2.5 overflow-x-auto pb-1" role="group" aria-label="Filtrar por cine">
+                <div className="flex items-center gap-1.5 mb-2.5 overflow-x-auto pb-1" role="group" aria-label="Filtrar por cine">
                   {['Todos', ...cineNames].map((c) => (
                     <button
                       key={c}
                       type="button"
                       onClick={() => setActiveCine(c)}
                       aria-pressed={activeCine === c}
-                      className={`px-3 py-2 rounded-full text-[11px] font-semibold whitespace-nowrap min-h-[44px] ${
-                        activeCine === c ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-700'
+                      className={`px-3 py-1.5 rounded-full text-[11px] font-black whitespace-nowrap min-h-[36px] ${
+                        activeCine === c ? 'bg-conn-teal text-white' : 'bg-conn-mist text-conn-tealDark'
                       }`}
                     >
-                      {c}
+                      {c.length > 18 ? c.slice(0, 17) + '…' : c}
                     </button>
                   ))}
                 </div>
@@ -683,12 +701,12 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
             <section aria-label="Distancia por calcular">
               <div className="flex items-center gap-2.5 mb-2.5 px-1">
                 <div>
-                  <p className="text-sm font-black text-slate-800">Distancia por calcular</p>
-                  <p className="text-[10px] text-slate-400 font-semibold">
+                  <p className="font-theme-title text-[15px] font-black text-conn-deep">Distancia por calcular</p>
+                  <p className="text-[10px] text-conn-muted font-bold">
                     {unknown.length} plan{unknown.length === 1 ? "" : "es"} sin desplazamiento estimado
                   </p>
                 </div>
-                <div className="flex-1 h-px bg-slate-200/80 ml-1" />
+                <div className="flex-1 h-px bg-conn-tealDark/15 ml-1" />
               </div>
               <div className="space-y-2.5">
                 {unknown.map((plan) => (

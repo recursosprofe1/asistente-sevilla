@@ -2,89 +2,63 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definición de Tokens de Diseño: Estética Medito - Azul Sereno */
+/* Lenguaje visual Conn: teal protagonista, tarjetas blancas, fondo aqua */
 :root,
-[data-theme="azul-sereno"] {
-  --theme-name: 'Azul Sereno';
-  --color-bg: #F0F4F8;               /* Azul papel suave */
-  --color-card: #FFFFFF;             /* Blanco puro */
-  --color-card-subtle: #EBF2FA;      /* Azul brisa sutil */
-  --color-border: #E2E8F0;           /* Borde sereno */
-  --color-border-focus: #3B82F6;     /* Azul cobalto */
-  --color-text: #0F172A;             /* Texto nítido oscuro pero suave */
-  --color-text-muted: #64748B;       /* Texto atenuado */
-  --color-primary: #1E3A8A;          /* Azul profundo Medito */
-  --color-primary-hover: #172554;
-  --color-primary-text: #FFFFFF;
-  --color-secondary: #3B82F6;        /* Azul cobalto suave */
-  --color-secondary-hover: #2563EB;
-  --color-accent: #93C5FD;           /* Azul pastel */
-  --color-surface: #F0F4F8;
-  --color-shadow: rgba(30, 58, 138, 0.08);
-  --radius-card: 1.625rem;           /* rounded-3xl */
-  --radius-pill: 9999px;             /* rounded-full */
-}
-
-[data-theme="indigo-noche"] {
-  --theme-name: 'Índigo Profundo';
-  --color-bg: #E8EEF5;
+[data-theme="conn"] {
+  --color-bg: #E9F4F4;
   --color-card: #FFFFFF;
-  --color-card-subtle: #DEE7F2;
-  --color-border: #CBD5E1;
-  --color-border-focus: #1E3A8A;
-  --color-text: #0B132B;
-  --color-text-muted: #475569;
-  --color-primary: #1E293B;
-  --color-primary-hover: #0F172A;
-  --color-primary-text: #FFFFFF;
-  --color-secondary: #2563EB;
-  --color-secondary-hover: #1D4ED8;
-  --color-accent: #60A5FA;
-  --color-surface: #E8EEF5;
-  --color-shadow: rgba(15, 23, 42, 0.10);
-  --radius-card: 1.625rem;
-  --radius-pill: 9999px;
+  --color-ink: #0B3B42;
+  --color-muted: #5E8B91;
+  --color-teal: #12A5B5;
+  --color-teal-dark: #0E7E8C;
+  --color-teal-deep: #0A5B66;
+  --color-mist: #DFF1F2;
+  --color-amber: #F5A623;
 }
 
-[data-theme="brisa-celeste"] {
-  --theme-name: 'Brisa Celeste';
-  --color-bg: #F4F8FB;
-  --color-card: #FFFFFF;
-  --color-card-subtle: #E6F0FA;
-  --color-border: #E1ECF7;
-  --color-border-focus: #60A5FA;
-  --color-text: #1E293B;
-  --color-text-muted: #64748B;
-  --color-primary: #2563EB;
-  --color-primary-hover: #1D4ED8;
-  --color-primary-text: #FFFFFF;
-  --color-secondary: #38BDF8;
-  --color-secondary-hover: #0EA5E9;
-  --color-accent: #BAE6FD;
-  --color-surface: #F4F8FB;
-  --color-shadow: rgba(37, 99, 235, 0.07);
-  --radius-card: 1.75rem;
-  --radius-pill: 9999px;
-}
-
-/* Transiciones suaves en todos los cambios de fondo y profundidad */
 body, .theme-transition {
   background-color: var(--color-bg);
-  color: var(--color-text);
+  color: var(--color-ink);
   transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* Tipografía de títulos serenos */
 .font-theme-title {
-  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
-  letter-spacing: -0.015em;
+  font-family: 'Nunito', 'Plus Jakarta Sans', -apple-system, sans-serif;
+  letter-spacing: -0.01em;
 }
 
 .font-theme-body {
-  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  font-family: 'Nunito', 'Plus Jakarta Sans', -apple-system, sans-serif;
 }
 
-/* Estilo para barra de scroll ultralimpia */
+/* Tarjeta Conn: blanca, muy redondeada con esquina exagerada */
+.conn-card {
+  background: var(--color-card);
+  border-radius: 28px 56px 28px 28px;
+  box-shadow: 0 10px 28px -8px rgba(11, 59, 66, 0.14);
+}
+
+/* Hero Conn: degradado teal con burbujas decorativas */
+.conn-hero {
+  background:
+    radial-gradient(circle at 88% -10%, rgba(255, 255, 255, 0.22) 0 56px, transparent 57px),
+    radial-gradient(circle at 102% 42%, rgba(255, 255, 255, 0.12) 0 84px, transparent 85px),
+    linear-gradient(160deg, #12A5B5 0%, #0E7E8C 62%, #0A5B66 100%);
+  border-radius: 28px 56px 28px 28px;
+  box-shadow: 0 14px 30px -10px rgba(10, 91, 102, 0.45);
+}
+
+/* Botón circular de filtro con etiqueta (estilo ejemplos) */
+.conn-circle-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 56px;
+  flex-shrink: 0;
+}
+
+/* Barra de scroll ultralimpia */
 ::-webkit-scrollbar {
   width: 4px;
   height: 4px;
@@ -93,14 +67,13 @@ body, .theme-transition {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+  background: #B9D9DB;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+  background: #8FBEC2;
 }
 
 /* Accesibilidad: foco visible y movimiento reducido */
-:focus-visible { outline: 2px solid #2563EB; outline-offset: 2px; }
+:focus-visible { outline: 2px solid #0E7E8C; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
-

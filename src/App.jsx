@@ -7,15 +7,17 @@ import CasaTab from "./components/tabs/CasaTab";
 import ComprasTab from "./components/tabs/ComprasTab";
 import DecisionesTab from "./components/tabs/DecisionesTab";
 
-// ── Icono de la app: brujula / blob azul ─────────────────────
+// ── Icono de la app: brújula Conn en pastilla teal ──────────
 function AppIcon({ className = "w-8 h-8" }) {
   return (
-    <svg className={className} viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M26 4C33 6.5 39.5 13 40.5 21C41.5 29 37 38 29 41C21 44 10.5 40 5.5 33C0.5 26 2 14.5 7.5 8.5C13 2.5 19 1.5 26 4Z" fill="#3B82F6"/>
-      <circle cx="22" cy="22" r="9" stroke="white" strokeWidth="2"/>
-      <path d="M25.5 18.5l-3 6-6 3 3-6 6-3z" fill="white"/>
-      <circle cx="22" cy="22" r="1.8" fill="#3B82F6"/>
-    </svg>
+    <span className={`inline-flex items-center justify-center rounded-2xl bg-conn-teal text-white ${className}`}
+      style={{ boxShadow: '0 8px 18px -6px rgba(18, 165, 181, 0.55)' }}>
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M15.5 8.5l-2.2 5.8-5.8 2.2 2.2-5.8 5.8-2.2z" />
+        <circle cx="12" cy="12" r="1" fill="currentColor" />
+      </svg>
+    </span>
   );
 }
 
@@ -42,10 +44,10 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F0F4F8] font-theme-body text-slate-900 flex justify-center selection:bg-blue-200">
-      <div className="w-full max-w-md min-h-screen flex flex-col bg-[#F0F4F8] relative border-x border-slate-200/60 shadow-2xl shadow-blue-950/5">
+    <div className="min-h-screen bg-conn-aqua font-theme-body text-conn-deep flex justify-center selection:bg-conn-mist">
+      <div className="w-full max-w-md min-h-screen flex flex-col bg-conn-aqua relative" style={{ boxShadow: '0 0 40px -18px rgba(10, 91, 102, 0.25)' }}>
 
-        {/* ── Top bar: icono de la app (con safe area top) ──── */}
+        {/* ── Top bar ──── */}
         <header
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.25rem)' }}
           className="flex items-center justify-between px-5 pb-2 flex-shrink-0"
@@ -53,12 +55,13 @@ export default function App() {
           <div className="flex items-center gap-2.5">
             <AppIcon />
             <div className="leading-none">
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Asistente</p>
-              <p className="text-base font-black text-slate-900">Sevilla</p>
+              <p className="text-[9px] font-extrabold text-conn-muted uppercase tracking-widest">Asistente</p>
+              <p className="text-base font-black text-conn-deep">Sevilla</p>
             </div>
           </div>
-          <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-sm">
-            <span className="text-xs font-black text-blue-600">S</span>
+          <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center font-black text-conn-tealDark text-xs"
+            style={{ boxShadow: '0 6px 14px -6px rgba(10, 91, 102, 0.35)' }}>
+            S
           </div>
         </header>
 
