@@ -10,6 +10,7 @@ Excluidos de todo: deporte, toros, religioso y flamenco.
   Vías Verdes (rutas).
 - **Rotativas del pool según grupo A/B/C/D** por nº de semana ISO (o `FEED_GROUP` a mano
   en el botón manual). Ciclo completo en un mes.
+- Fija Huelva capital: portal de cultura (la agenda huelva.es bloquea al robot).
 - **Caídas en verificación y sustituidas:** Wikiloc x3 (403 anti-robots), FIT Cádiz y South
   Series (503), webs oficiales de cines (403/errores), GR-48/fedamon (403), CaixaForum (403),
   dominio museosdeandalucia caído, Fundición, Sala X, Mercado Triana, Riberas, Carmona,

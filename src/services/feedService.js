@@ -43,7 +43,7 @@ export function getLocalPurchaseSuggestions(desireText) {
   return GENERIC_SUGGESTIONS;
 }
 
-export const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz4-3PXUU6KMlK3ePdRLJediGxNrcbhpvT5STxBpgWyA6GzgOyDZX4gapFzetfPx8Uk/exec';
+export const DEFAULT_APPS_SCRIPT_URL = 'https://raw.githubusercontent.com/recursosprofe1/asistente-sevilla/main/feeds/feed-latest.json';
 
 let syncInFlight = null;
 
