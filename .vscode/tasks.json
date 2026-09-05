@@ -1,0 +1,86 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "npm: install",
+      "type": "npm",
+      "script": "install",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      },
+      "detail": "Instala dependencias (equivale a npm install)"
+    },
+    {
+      "label": "npm: dev",
+      "type": "npm",
+      "script": "dev",
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": ".",
+          "file": 1,
+          "location": 2,
+          "message": 3
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*(Vite|Local|ready|started).*",
+          "endsPattern": ".*(Local:.*http|ready in).*"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "detail": "Arranca Vite en http://localhost:3000"
+    },
+    {
+      "label": "npm: build",
+      "type": "npm",
+      "script": "build",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": "$tsc",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "detail": "Genera dist/ para Capacitor (webDir)"
+    },
+    {
+      "label": "npm: preview",
+      "type": "npm",
+      "script": "preview",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "detail": "Previsualiza el build de dist/"
+    },
+    {
+      "label": "cap: sync",
+      "type": "shell",
+      "command": "npx cap sync",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "detail": "Sincroniza dist/ con android/ (sin escribir el comando)"
+    },
+    {
+      "label": "cap: sync + build web",
+      "dependsOn": ["npm: build", "cap: sync"],
+      "dependsOrder": "sequence",
+      "group": "build",
+      "detail": "Hace build web y lo pasa a Android con 1 clic"
+    }
+  ]
+}

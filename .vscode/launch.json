@@ -1,0 +1,26 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Web: Chrome en http://localhost:3000",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}/src",
+      "preLaunchTask": "npm: dev"
+    },
+    {
+      "name": "Web: Preview build (dist)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:4173",
+      "webRoot": "${workspaceFolder}/dist"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Dev completo (Vite + Chrome)",
+      "configurations": ["Web: Chrome en http://localhost:3000"]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+
+https://script.google.com/macros/s/AKfycbwe8rH1wbWZfxNvN1Ivza54OlhNXUa-ZDWYiWN8UmYmv0cXniMT1OApnBeBxmbc2tfP/exec
+
+npm install
+npm run dev
+
+Tavily
+
+Davor Suker 
+sreyespruebaia@gmail.com
+
+Script
+salreydec@

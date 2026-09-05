@@ -1,0 +1,22 @@
+# Dependencias
+node_modules/
+
+# Build web
+dist/
+
+# Build Android / Capacitor
+android/build/
+android/app/build/
+android/.gradle/
+*.apk
+
+# Capturas temporales del flujo con el agente
+capturas/
+
+# Logs y temporales
+*.log
+.DS_Store
+Thumbs.db
+
+# Estado local del IDE (no del proyecto)
+.opencode/

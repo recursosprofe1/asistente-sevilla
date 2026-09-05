@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Asistente Sevilla</string>
+    <string name="title_activity_main">Asistente Sevilla</string>
+    <string name="package_name">com.asistente.sevilla</string>
+    <string name="custom_url_scheme">com.asistente.sevilla</string>
+</resources>

@@ -1,0 +1,12 @@
+{
+  "recommendations": [
+    "eamodio.gitlens",
+    "mhutchie.git-graph",
+    "bradlc.vscode-tailwindcss",
+    "usernamehw.errorlens",
+    "esbenp.prettier-vscode",
+    "formulahendry.auto-rename-tag",
+    "alefragnani.project-manager",
+    "bilalbentoumi.vsc-opencode"
+  ]
+}

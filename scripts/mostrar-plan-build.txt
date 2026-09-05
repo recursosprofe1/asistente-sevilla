@@ -1,0 +1,1 @@
+const s = JSON.parse(localStorage.getItem('settings.v3') || '{}'); s.general = s.general || {}; s.general.showCustomAgents = true; localStorage.setItem('settings.v3', JSON.stringify(s)); location.reload();
