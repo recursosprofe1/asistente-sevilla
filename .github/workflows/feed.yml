@@ -1,0 +1,46 @@
+name: Feed semanal
+
+on:
+  # Botón manual: pruebas, las veces que sean (con grupo A/B/C/D elegible)
+  workflow_dispatch:
+    inputs:
+      grupo:
+        description: 'Grupo del pool (vacío = semana actual)'
+        required: false
+        default: ''
+        type: choice
+        options: ['', A, B, C, D]
+  # Automático semanal (activar cuando dirección diga "ya funciona"):
+  # schedule:
+  #   - cron: '0 6 * * 3'
+
+permissions:
+  contents: write
+
+jobs:
+  build-feed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Generar feed
+        env:
+          GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
+          GEMINI_MODEL: gemini-2.5-flash
+          FEED_GROUP: ${{ inputs.grupo }}
+        run: node scripts/build-feed.mjs
+      - name: Publicar feed
+        run: |
+          git config user.name "asistente-bot"
+          git config user.email "asistente-bot@local"
+          git add feeds/feed-latest.json feeds/feed-*.json
+          git diff --cached --quiet || git commit -m "Feed semanal $(date -u +%F)"
+          git push
+      - name: Subir feed como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: feed
+          path: feeds/feed-latest.json
