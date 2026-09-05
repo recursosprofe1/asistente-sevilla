@@ -3,7 +3,7 @@ import {
   ConnCorazon, ConnOjoOff, ConnRestaurar, ConnCheck, ConnSync, ConnSol,
   ConnPapelera, ConnPin, ConnReloj, ConnChevron, ConnBrujula,
 } from "../illustrations/ConnIcons";
-import { ConnCategoryIcon, ConnCategoryGlyph } from "../illustrations/ConnIcons";
+import { ConnBadge } from "../illustrations/ConnIcons";
 import { db, discardPlan, restorePlan, getFeedMeta } from "../../db";
 import { syncPlansFromCloud } from "../../services/feedService";
 import {
@@ -63,7 +63,7 @@ function PlanCard({
         className="w-full text-left focus-visible:outline-2 focus-visible:outline-conn-tealDark"
       >
         <div className="flex items-center gap-3 p-4">
-          <ConnCategoryIcon category={category} size="sm" />
+          <ConnBadge category={category} size={44} />
 
           <div className="flex-1 min-w-0">
             <h3 className="font-theme-title text-[15px] font-black text-conn-deep leading-snug line-clamp-2">
@@ -206,23 +206,32 @@ function PlanCard({
   );
 }
 
-// ── Botón circular de categoría (estilo ejemplos) ──
+// ── Botón circular de categoría: insignia con sombra larga + etiqueta ──
 function CategoryCircle({ label, active, onClick, category }) {
   return (
     <button type="button" onClick={onClick} aria-pressed={active} className="conn-circle-btn">
-      <span className={`flex items-center justify-center w-12 h-12 rounded-full transition-all ${
-        active ? 'bg-conn-teal text-white scale-105' : 'bg-white text-conn-tealDark'
-      }`}
-        style={{ boxShadow: active
-          ? '0 8px 18px -6px rgba(18, 165, 181, 0.55)'
-          : '0 6px 14px -8px rgba(10, 91, 102, 0.30)' }}>
-        <ConnCategoryGlyph category={category} className="w-6 h-6" />
+      <span className={`rounded-full transition-all ${active ? 'scale-105' : ''}`}
+        style={active
+          ? { outline: '3px solid #0B3B42', outlineOffset: '2px', borderRadius: '9999px' }
+          : undefined}>
+        <ConnBadge category={category} size={52} />
       </span>
-      <span className={`text-[9px] leading-tight text-center font-black max-w-[64px] truncate ${active ? 'text-conn-deep' : 'text-conn-muted'}`}>
+      <span className={`text-[9px] leading-tight text-center font-black max-w-[68px] truncate ${active ? 'text-conn-deep' : 'text-conn-muted'}`}>
         {label}
       </span>
     </button>
   );
+}
+
+// Nombre corto de cine para que quepa sin scroll.
+function shortCineName(venue) {
+  const v = String(venue || '');
+  if (/lagoh/i.test(v)) return 'Lagoh';
+  if (/nervi/i.test(v)) return 'Nervión';
+  if (/avenida/i.test(v)) return 'Avenida';
+  if (/metromar|mairena/i.test(v)) return 'Metromar';
+  if (/armas/i.test(v)) return 'Armas';
+  return v.length > 14 ? v.slice(0, 13) + '…' : (v || 'Cine');
 }
 
 // ── Tab principal ─────────────────────────────────────────────
@@ -515,9 +524,9 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
           ))}
         </div>
 
-        {/* Filtro por categoría: círculos con icono */}
+        {/* Filtro por categoría: rejilla sin scroll (opción A) */}
         {availableCategories.length > 1 && (
-          <div className="flex items-start gap-2 mt-3 overflow-x-auto pb-1 -mx-1 px-1" role="group" aria-label="Filtrar por categoría">
+          <div className="grid grid-cols-4 gap-x-1 gap-y-2.5 mt-3" role="group" aria-label="Filtrar por categoría">
             <CategoryCircle
               label="Todas"
               category="Varios"
@@ -617,7 +626,7 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
             <section key={cat} aria-label={`Categoría ${cat}`}>
               {/* Cabecera de categoria */}
               <div className="flex items-center gap-2.5 mb-2.5 px-1">
-                <ConnCategoryIcon category={cat} size="sm" />
+                <ConnBadge category={cat} size={40} />
                 <div>
                   <p className="font-theme-title text-[15px] font-black text-conn-deep">{cat}</p>
                   <p className="text-[10px] text-conn-muted font-bold">
@@ -650,7 +659,7 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
           {showCineSection && (
             <section aria-label="Cartelera de cine de Sevilla">
               <div className="flex items-center gap-2.5 mb-2.5 px-1">
-                <ConnCategoryIcon category="Cine" size="sm" />
+                <ConnBadge category="Cine" size={40} />
                 <div>
                   <p className="font-theme-title text-[15px] font-black text-conn-deep">Cartelera de cine</p>
                   <p className="text-[10px] text-conn-muted font-bold">
@@ -661,18 +670,18 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
               </div>
 
               {cineNames.length > 1 && (
-                <div className="flex items-center gap-1.5 mb-2.5 overflow-x-auto pb-1" role="group" aria-label="Filtrar por cine">
+                <div className="grid grid-cols-3 gap-1.5 mb-2.5" role="group" aria-label="Filtrar por cine">
                   {['Todos', ...cineNames].map((c) => (
                     <button
                       key={c}
                       type="button"
                       onClick={() => setActiveCine(c)}
                       aria-pressed={activeCine === c}
-                      className={`px-3 py-1.5 rounded-full text-[11px] font-black whitespace-nowrap min-h-[36px] ${
+                      className={`px-2 py-1.5 rounded-full text-[11px] font-black truncate min-h-[36px] ${
                         activeCine === c ? 'bg-conn-teal text-white' : 'bg-conn-mist text-conn-tealDark'
                       }`}
                     >
-                      {c.length > 18 ? c.slice(0, 17) + '…' : c}
+                      {c === 'Todos' ? 'Todos' : shortCineName(c)}
                     </button>
                   ))}
                 </div>

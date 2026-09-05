@@ -1,10 +1,7 @@
-import React from "react";
+import React, { useId } from "react";
 
 // ═══════════════════════════════════════════════════════════════
 //  CONN ICONS — juego propio dibujado a mano (trazo fino redondeado)
-//  Estilo: ejemplos de referencia (smart-home teal): línea 1.8,
-//  extremos redondos, 24×24. Se tiñen con currentColor.
-// ═══════════════════════════════════════════════════════════════
 
 function Base({ children, className = "w-6 h-6" }) {
   return (
@@ -256,6 +253,61 @@ const CATEGORY_ICON = {
   "Cine": ConnCine,
   "Varios": ConnBrujula,
 };
+
+const CATEGORY_COLOR = {
+  "Rutas y naturaleza": "#3A9E70",
+  "Música": "#9C6FDE",
+  "Teatro y espectáculos": "#E8644A",
+  "Gastronomía": "#E07040",
+  "Arte": "#D4860A",
+  "Cine": "#4A6FCC",
+  "Varios": "#12A5B5",
+};
+
+// Trazos internos reutilizables para la insignia con sombra larga.
+function GlyphPaths({ category }) {
+  switch (category) {
+    case "Rutas y naturaleza":
+      return (<><circle cx="17.5" cy="6" r="2" /><path d="M3 19l6-9 4 5.5L15.5 12 21 19H3z" /></>);
+    case "Música":
+      return (<><path d="M9.5 17.5V6l10-2v11" /><circle cx="6.5" cy="17.5" r="3" /><circle cx="16.5" cy="15" r="3" /></>);
+    case "Teatro y espectáculos":
+      return (<><path d="M4 5.5h16V12c0 4.5-3.6 7.5-8 7.5S4 16.5 4 12V5.5z" /><path d="M8.5 14.5c1 1.2 2.2 1.8 3.5 1.8s2.5-.6 3.5-1.8" /></>);
+    case "Gastronomía":
+      return (<><path d="M4 16.5a8 8 0 0 1 16 0" /><path d="M2.5 16.5h19" /><circle cx="12" cy="6" r="1" /><path d="M9 20h6" /></>);
+    case "Arte":
+      return (<><rect x="4" y="5" width="16" height="14" rx="3" /><circle cx="9" cy="10" r="1.5" /><path d="M4 16.5l5-4.5 3.5 3 3-2.5 4.5 3.5" /></>);
+    case "Cine":
+      return (<><path d="M9.5 8L6.5 3.5M14.5 8l3-4.5" /><rect x="3" y="8" width="18" height="11" rx="3" /><path d="M10.5 11.5l4.5 2.5-4.5 2.5v-5z" fill="currentColor" stroke="none" /></>);
+    default:
+      return (<><circle cx="12" cy="12" r="8.5" /><path d="M15.5 8.5l-2.2 5.8-5.8 2.2 2.2-5.8 5.8-2.2z" /></>);
+  }
+}
+
+/**
+ * Insignia estilo ejemplo: disco de color + glifo blanco con SOMBRA LARGA
+ * real (silueta desplazada recortada al disco).
+ */
+export function ConnBadge({ category, size = 52, className = "" }) {
+  const color = CATEGORY_COLOR[category] || "#12A5B5";
+  const cid = `connb${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
+  return (
+    <svg viewBox="0 0 64 64" width={size} height={size} className={`flex-shrink-0 ${className}`}>
+      <defs>
+        <clipPath id={cid}><circle cx="32" cy="32" r="30" /></clipPath>
+      </defs>
+      <circle cx="32" cy="32" r="30" fill={color} />
+      <g clipPath={`url(#${cid})`}>
+        <g transform="translate(30,31)" fill="none" stroke="rgba(0,0,0,0.22)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+          <GlyphPaths category={category} />
+        </g>
+      </g>
+      <g transform="translate(19,19)" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <GlyphPaths category={category} />
+      </g>
+    </svg>
+  );
+}
 
 export function ConnCategoryGlyph({ category, className = "w-6 h-6" }) {
   const Ico = CATEGORY_ICON[category] || ConnBrujula;

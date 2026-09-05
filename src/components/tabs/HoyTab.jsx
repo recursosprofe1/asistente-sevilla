@@ -2,7 +2,7 @@
 import {
   ConnCheck, ConnOjoOff, ConnPin, ConnReloj, ConnCalendario, ConnBrujula,
 } from "../illustrations/ConnIcons";
-import { ConnCategoryIcon } from "../illustrations/ConnIcons";
+import { ConnBadge } from "../illustrations/ConnIcons";
 import { db, discardPlan, togglePlanForToday } from "../../db";
 import { getTodayPlans } from "../../services/planRepository";
 import { getTodayKeyMadrid, formatLongDateMadrid, getGreetingMadrid } from "../../utils/time";
@@ -138,7 +138,7 @@ export default function HoyTab({ onNavigateTab }) {
                   className="w-full text-left focus-visible:outline-2 focus-visible:outline-conn-tealDark"
                 >
                   <div className="flex items-center gap-3 p-4">
-                    <ConnCategoryIcon category={category} />
+                    <ConnBadge category={category} size={56} />
 
                     <div className="flex-1 min-w-0">
                       <p className="text-[10px] font-black text-conn-muted uppercase tracking-widest mb-0.5">

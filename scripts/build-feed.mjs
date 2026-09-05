@@ -123,13 +123,15 @@ function scrapeCineBlocks(rawHtml, src) {
     if (items.length >= 12) return items;
   }
   // Estrategia 2 (eCartelera): enlaces /peliculas/<slug> + sesiones del tramo
-  // (se usa el HTML crudo porque los horarios van en atributos data-*).
+  // (se usa el HTML crudo: los horarios fiables van en data-session-time).
   if (items.length < 3) {
     const parts = rawHtml.split(/\/peliculas\/([\w-]+)\//);
     for (let i = 1; i < parts.length; i += 2) {
       const slug = parts[i];
-      const seg = (parts[i + 1] || '').slice(0, 6000);
-      const times = [...new Set(seg.match(/\b([01]?\d|2[0-3]):[0-5]\d\b/g) || [])].slice(0, 8);
+      const seg = parts[i + 1] || '';
+      const attrTimes = [...new Set([...seg.matchAll(/data-session-time="([01]?\d:[0-5]\d)"/g)].map((m) => m[1]))].slice(0, 8);
+      const anyTimes = [...new Set(seg.match(/\b([01]?\d|2[0-3]):[0-5]\d\b/g) || [])].slice(0, 8);
+      const times = attrTimes.length > 0 ? attrTimes : anyTimes;
       if (!times.length) continue;
       const titulo = slug.replace(/-\d{4}$/, '').replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
       if (items.some((x) => normTitle(x.titulo) === normTitle(titulo))) continue;
@@ -446,21 +448,29 @@ async function fullRun() {
       byTitle[key].travelMinutes = Math.min(byTitle[key].travelMinutes, m.travelMinutes);
     }
   }
-  const cartelera = Object.values(byTitle).map((e) => ({ titulo: e.titulo, cine: e.cines.join(' + '), sesiones: e.sesiones, url: e.url, travelMinutes: e.travelMinutes }));
-  // Respaldo: si el scrape sale pobre (día flojo de cartelera), se conserva
-  // la anterior publicada en el repo en vez de dejar la app casi vacía.
+  const now = new Date();
+  const nowMs = now.getTime();
+  const cartelera = Object.values(byTitle).map((e) => ({ titulo: e.titulo, cine: e.cines.join(' + '), sesiones: e.sesiones, url: e.url, travelMinutes: e.travelMinutes, seenAt: nowMs }));
+  // Unión con lo anterior: lo nuevo manda (actualiza sesiones); lo que ya no
+  // sale pero se vio hace menos de 10 días se conserva para no vaciar la
+  // cartelera en días flojos de scrapeo. Más viejo se cae solo.
   let carteleraPartial = cartelera.length < 3;
   try {
     const prevRaw = readFileSync('feeds/feed-latest.json', 'utf8');
     const prevCart = (JSON.parse(prevRaw).cartelera || []).filter((m) => m && (m.titulo || m.title));
-    if (cartelera.length < 3 && prevCart.length >= 3) {
-      console.log(`Scrape pobre (${cartelera.length}), se conserva la cartelera anterior (${prevCart.length}).`);
-      cartelera.length = 0;
-      cartelera.push(...prevCart);
+    const seenKeys = new Set(cartelera.map((m) => normTitle(m.titulo)));
+    let kept = 0;
+    for (const old of prevCart) {
+      const key = normTitle(old.titulo || old.title);
+      if (!key || seenKeys.has(key)) continue;
+      const seenAt = Number(old.seenAt) || 0;
+      if (nowMs - seenAt > 10 * 86400000) continue;
+      cartelera.push({ titulo: old.titulo || old.title, cine: old.cine, sesiones: old.sesiones || [], url: old.url, travelMinutes: old.travelMinutes, seenAt });
+      kept += 1;
     }
+    if (kept > 0) console.log(`Cartelera: ${kept} pelis conservadas de días anteriores.`);
   } catch { /* primera ejecución: sin anterior */ }
 
-  const now = new Date();
   const feed = {
     schemaVersion: 2,
     generatedAt: toIsoMadrid(now),
