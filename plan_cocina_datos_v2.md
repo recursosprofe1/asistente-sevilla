@@ -102,6 +102,19 @@ Cada semana, con botón manual, publicar:
 5. Desplegar → Gestionar despliegues → lápiz → Nueva versión.
 6. En la app web pulsa sincronizar y revisa el Diagnóstico.
 
+## 13. Renovación visual Conn + pool válido (2026-09-05, fase 1-3 hechas)
+- Pool: sustituidas Teatro Central, Acuario, La Ciudad Cádiz, Huelva capital
+  (verificadas); respaldo de cartelera en días flojos; re-verificado A-D.
+- Nuevo lenguaje (ejemplos smart-home teal): `ConnIcons.jsx` (18 iconos SVG
+  propios + medallones de categoría), tokens teal en Tailwind + `index.css`
+  (`.conn-card`, `.conn-hero`), fuente Nunito.
+- Hoy: hero teal con saludo/fecha/conteo; tarjetas blancas asimétricas.
+- Planes: hero con sincronizar, tiempo en 4 píldoras compactas, modos y cines
+  compactos, categorías en círculos con icono (caben en la caja).
+- Casa/Compras/Decisiones: cerradas, sin tocar (pendiente abrir en otra versión).
+- Web de pruebas: https://recursosprofe1.github.io/asistente-sevilla/
+- Pendiente OK del director → semanal + APK final.
+
 ## 12. Mudanza a GitHub (2026-09-05, verificado)
 - Adiós Google Scripts para la cocina: `scripts/build-feed.mjs` (Node, sin
   dependencias) + `.github/workflows/feed.yml` (auto en cada subida + botón
