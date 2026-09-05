@@ -306,6 +306,7 @@ async function checkSources() {
 // Llama a Gemini con cadena de repuesto. La clave viaja por cabecera
 // (nunca en la URL) para que no salga en registros.
 let MODEL_USED = '';
+const MODEL_ATTEMPTS = [];
 async function geminiGenerate(prompt) {
   const models = [GEMINI_MODEL, ...GEMINI_FALLBACKS.filter((m) => m !== GEMINI_MODEL)];
   let lastErr = null;
@@ -320,7 +321,7 @@ async function geminiGenerate(prompt) {
       const text = (await resp.json()).candidates[0].content.parts[0].text;
       MODEL_USED = model;
       return { text };
-    } catch (e) { lastErr = e; console.log('Repuesto: ' + e.message); }
+    } catch (e) { lastErr = e; MODEL_ATTEMPTS.push(`${model}: ${(e.message || String(e)).slice(0, 160)}`); console.log('Repuesto: ' + e.message); }
   }
   throw lastErr;
 }
@@ -334,7 +335,11 @@ async function fullRun() {
   const errors = [];
   const settled = await mapLimit(all, 4, async (src) => {
     try { return { src, lines: await fetchSource(src) }; }
-    catch (e) { return { src, error: e.message || String(e) }; }
+    catch (e1) {
+      await new Promise((r) => setTimeout(r, 3000));
+      try { return { src, lines: await fetchSource(src) }; }
+      catch (e2) { return { src, error: (e2.message || String(e2)) + ' (tras reintento)' }; }
+    }
   });
   for (const r of settled) {
     if (r.lines) lines.push(...r.lines);
@@ -464,6 +469,7 @@ async function fullRun() {
     `- Fuentes con aviso: ${errors.length ? errors.join(' / ') : 'ninguna'}`,
     `- Cines con aviso: ${cineErrors.length ? cineErrors.join(' / ') : 'ninguno'}`,
     `- Válido hasta: ${feed.validUntil}`,
+    `- Intentos de modelo: ${MODEL_ATTEMPTS.length ? MODEL_ATTEMPTS.join(' / ') : 'primero OK (' + MODEL_USED + ')'}`,
   ].join('\n');
   writeFileSync('feeds/last-run.md', report);
   console.log(`Feed: ${planes.length} planes (Sev ${nSevilla} HC ${nHC} Rutas ${nRutas}) + ${cartelera.length} pelis. Sin cubrir: ${JSON.stringify(missing)}. Grupo ${GROUP}. Modelo ${MODEL_USED}.`);
