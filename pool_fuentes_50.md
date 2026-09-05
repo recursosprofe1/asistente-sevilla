@@ -6,8 +6,8 @@ Excluidos de todo: deporte, toros, religioso y flamenco.
 
 ## Cómo rota
 - **Fijas (8, todas las semanas):** ICAS agenda, Agenda Junta Sevilla, Ayto Sevilla agenda,
-  Agenda Junta Huelva, Agenda Huelva capital, Agenda Junta Cádiz, Agenda Cádiz capital,
-  Vías Verdes (rutas).
+  Agenda Junta Huelva, Huelva costa Ayamonte, Agenda Junta Cádiz, Agenda Cádiz capital,
+  Vías Verdes (rutas). (huelva.es bloquea al robot: sustituida por Ayamonte.)
 - **Rotativas del pool según grupo A/B/C/D** por nº de semana ISO (o `FEED_GROUP` a mano
   en el botón manual). Ciclo completo en un mes.
 - Fija Huelva capital: portal de cultura (la agenda huelva.es bloquea al robot).
@@ -34,12 +34,12 @@ Excluidos de todo: deporte, toros, religioso y flamenco.
 | Sala Custom | https://www.salacustom.com/ | B | Rock y directo medio |
 | Agenda expos | https://www.agendadesevilla.com/exposiciones/ | B | Exposiciones agregadas |
 | Atín Aya | https://icas.sevilla.org/espacios/atin-aya | B | Foto y ciudad |
-| Teatro Central | https://www.juntadeandalucia.es/cultura/teatrocentral | B | Escena contemporánea (ficha fina) |
+| Teatro Sevilla (agenda) | https://www.agendadesevilla.com/teatro/ | B | Sustituye a Teatro Central (ficha fina) |
 | Teatro Alameda | https://icas.sevilla.org/espacios/teatro-alameda | C | Familiar y alternativo |
 | Cartuja Center | https://cartujacenter.com/ | C | Musicales y comedia |
-| Acuario Sevilla | https://www.acuariosevilla.es/ | C | Familiar (verificar en próxima pasada) |
+| Conciertos Sevilla | https://www.agendadesevilla.com/conciertos/ | C | Sustituye a Acuario (sin verificar) |
 | Antiquarium | https://icas.sevilla.org/espacios/antiquarium | C | Arqueología urbana |
-| Lonja del Barranco | https://www.mercadodelbarranco.com/ | C | Gourmet junto al río (verificar) |
+| Lonja del Barranco | https://www.mercadodelbarranco.com/ | C | Gourmet junto al río |
 | Santiponce Ayto | https://www.santiponce.es/ | C | Provincia cercana |
 | Maestranza | https://www.teatrodelamaestranza.es/temporadas/ | D | Ópera y clásica grande |
 | Espacio Turina | https://icas.sevilla.org/espacios/espacio-turina | D | Clásica y antigua estable |
@@ -65,7 +65,7 @@ Excluidos de todo: deporte, toros, religioso y flamenco.
 | Casa Iberoamérica | https://institucional.cadiz.es/area/Casa-de-Iberoamerica | B | Expos y ciclos |
 | Baluarte Candelaria | https://institucional.cadiz.es/area/Baluarte-de-la-Candelaria | C | Expos y ciclos |
 | Planeamos Diputación | https://www.dipucadiz.es/cultura/Varios/planeamos-2026/ | D | 455 acts pueblos, no-tópico |
-| La Ciudad Cádiz | https://laciudad.cadiz.es/ | D | Portal capital (ficha fina) |
+| Diputación Cádiz | https://www.dipucadiz.es/ | D | Sustituye a La Ciudad (ficha fina) |
 
 ## RUTAS (8 + Vías Verdes en fijas)
 | Fuente | URL | Grupo | Por qué |
@@ -78,7 +78,7 @@ Excluidos de todo: deporte, toros, religioso y flamenco.
 | Doñana itinerarios | https://www.miteco.gob.es/eu/parques-nacionales-oapn/red-parques-nacionales/parques-nacionales/donana/guia-visitante/itinerarios.html | C | Rutas guiadas |
 | Sierra Norte (Ventana) | https://www.juntadeandalucia.es/medioambiente/portal/web/ventanadelvisitante/detalle-buscador-mapa/-/asset_publisher/Jlbxh2qB3NwR/content/sierra-norte-de-sevilla/255035 | D | Ficha oficial |
 
-## Cines (siempre los 4, dedup por título; lector con doble estrategia)
+## Cines (siempre los 4, dedup por título; lector con doble estrategia + respaldo a la anterior si el día sale flojo)
 - Yelmo Lagoh — https://www.ecartelera.com/cines/yelmo-cines-premium-lagoh/
 - Cinesur Nervión — https://www.ecartelera.com/cines/446,0,1.html
 - Avenida 5 Cines — https://www.ecartelera.com/cines/149,0,1.html

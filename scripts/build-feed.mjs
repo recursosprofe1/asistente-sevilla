@@ -10,7 +10,7 @@
  * Modelo gratis: gemini-2.5-flash (texto + grounding gratis en free tier).
  */
 import { createHash } from 'node:crypto';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const GEMINI_KEY = process.env.GEMINI_KEY || '';
 // 2.0 jubilado 01/06/2026 · 2.x bloqueado a cuentas nuevas → 3.6-flash (estable).
@@ -35,7 +35,7 @@ const FRESH_FIXED = [
   { name: 'Agenda Junta Sevilla', url: 'https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/sevilla', zona: 'Sevilla' },
   { name: 'Ayto Sevilla agenda', url: 'https://www.sevilla.org/ayuntamiento/alcaldia/comunicacion/calendario/agenda-actividades', zona: 'Sevilla' },
   { name: 'Agenda Junta Huelva', url: 'https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/huelva', zona: 'Huelva' },
-  { name: 'Agenda Huelva capital', url: 'https://www.huelva.es/portal/es/cultura', zona: 'Huelva' },
+  { name: 'Huelva costa (Ayamonte)', url: 'https://www.ayamonte.es/', zona: 'Huelva' },
   { name: 'Agenda Junta Cádiz', url: 'https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/cadiz', zona: 'Cádiz' },
   { name: 'Agenda Cádiz capital', url: 'https://institucional.cadiz.es/eventos', zona: 'Cádiz' },
   { name: 'Vías Verdes', url: 'https://www.viasverdes.com/', zona: 'Rutas' },
@@ -60,11 +60,11 @@ const POOL = [
   { name: 'Sala Custom', url: 'https://www.salacustom.com/', zona: 'Sevilla', grupo: 'B' },
   { name: 'Agenda expos', url: 'https://www.agendadesevilla.com/exposiciones/', zona: 'Sevilla', grupo: 'B' },
   { name: 'Atín Aya', url: 'https://icas.sevilla.org/espacios/atin-aya', zona: 'Sevilla', grupo: 'B' },
-  { name: 'Teatro Central', url: 'https://www.juntadeandalucia.es/cultura/teatrocentral', zona: 'Sevilla', grupo: 'B' },
+  { name: 'Teatro Sevilla (agenda)', url: 'https://www.agendadesevilla.com/teatro/', zona: 'Sevilla', grupo: 'B' },
   // SEVILLA C
   { name: 'Teatro Alameda', url: 'https://icas.sevilla.org/espacios/teatro-alameda', zona: 'Sevilla', grupo: 'C' },
   { name: 'Cartuja Center', url: 'https://cartujacenter.com/', zona: 'Sevilla', grupo: 'C' },
-  { name: 'Acuario Sevilla', url: 'https://www.acuariosevilla.es/', zona: 'Sevilla', grupo: 'C' },
+  { name: 'Conciertos Sevilla (agenda)', url: 'https://www.agendadesevilla.com/conciertos/', zona: 'Sevilla', grupo: 'C' },
   { name: 'Antiquarium', url: 'https://icas.sevilla.org/espacios/antiquarium', zona: 'Sevilla', grupo: 'C' },
   { name: 'Lonja del Barranco', url: 'https://www.mercadodelbarranco.com/', zona: 'Sevilla', grupo: 'C' },
   { name: 'Santiponce Ayto', url: 'https://www.santiponce.es/', zona: 'Sevilla', grupo: 'C' },
@@ -87,7 +87,7 @@ const POOL = [
   { name: 'Casa Iberoamérica', url: 'https://institucional.cadiz.es/area/Casa-de-Iberoamerica', zona: 'Cádiz', grupo: 'B' },
   { name: 'Baluarte Candelaria', url: 'https://institucional.cadiz.es/area/Baluarte-de-la-Candelaria', zona: 'Cádiz', grupo: 'C' },
   { name: 'Planeamos Diputación', url: 'https://www.dipucadiz.es/cultura/Varios/planeamos-2026/', zona: 'Cádiz', grupo: 'D' },
-  { name: 'La Ciudad Cádiz', url: 'https://laciudad.cadiz.es/', zona: 'Cádiz', grupo: 'D' },
+  { name: 'Diputación Cádiz', url: 'https://www.dipucadiz.es/', zona: 'Cádiz', grupo: 'D' },
   // RUTAS (8 directas + Vías Verdes en fijas)
   { name: 'Sierra Norte senderos', url: 'https://www.sierranortedesevilla.es/actividades/senderismo/senderos-sierra-norte-de-sevilla.html', zona: 'Rutas', grupo: 'A' },
   { name: 'Castañares Constantina', url: 'https://www.juntadeandalucia.es/medioambiente/portal/web/ventanadelvisitante/detalle-buscador-mapa/-/asset_publisher/Jlbxh2qB3NwR/content/los-casta%C3%B1ares/255035', zona: 'Rutas', grupo: 'A' },
@@ -447,13 +447,25 @@ async function fullRun() {
     }
   }
   const cartelera = Object.values(byTitle).map((e) => ({ titulo: e.titulo, cine: e.cines.join(' + '), sesiones: e.sesiones, url: e.url, travelMinutes: e.travelMinutes }));
+  // Respaldo: si el scrape sale pobre (día flojo de cartelera), se conserva
+  // la anterior publicada en el repo en vez de dejar la app casi vacía.
+  let carteleraPartial = cartelera.length < 3;
+  try {
+    const prevRaw = readFileSync('feeds/feed-latest.json', 'utf8');
+    const prevCart = (JSON.parse(prevRaw).cartelera || []).filter((m) => m && (m.titulo || m.title));
+    if (cartelera.length < 3 && prevCart.length >= 3) {
+      console.log(`Scrape pobre (${cartelera.length}), se conserva la cartelera anterior (${prevCart.length}).`);
+      cartelera.length = 0;
+      cartelera.push(...prevCart);
+    }
+  } catch { /* primera ejecución: sin anterior */ }
 
   const now = new Date();
   const feed = {
     schemaVersion: 2,
     generatedAt: toIsoMadrid(now),
     validUntil: toIsoMadrid(new Date(now.getTime() + VALID_DAYS * 86400000)),
-    status: (missing.length === 0 && cartelera.length >= 3 && deduped.length >= 10) ? 'ok' : 'partial',
+    status: (missing.length === 0 && !carteleraPartial && deduped.length >= 10) ? 'ok' : 'partial',
     quotasMissing: missing, cineErrors, searchErrors: errors,
     planes, cartelera,
   };
