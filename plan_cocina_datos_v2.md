@@ -104,12 +104,22 @@ Cada semana, con botón manual, publicar:
 
 ## 12. Mudanza a GitHub (2026-09-05, verificado)
 - Adiós Google Scripts para la cocina: `scripts/build-feed.mjs` (Node, sin
-  dependencias) + `.github/workflows/feed.yml` (botón manual + semanal apagado).
+  dependencias) + `.github/workflows/feed.yml` (auto en cada subida + botón
+  manual + semanal apagado hasta el OK).
+- Web de pruebas auto: `.github/workflows/preview.yml` → URL fija
+  `https://recursosprofe1.github.io/asistente-sevilla/` (falta 1 clic:
+  Settings → Pages → Source: GitHub Actions). `vite.config.js` con `base './'`.
+- Modelo: `gemini-3.6-flash` (2.0 muerto + 2.x bloqueado a cuentas nuevas,
+  verificado con el error real del robot) + cadena de repuesto automática
+  (3.5-flash → 3.1-flash-lite) + clave por cabecera (no sale en registros).
+- Cada ejecución deja `feeds/feed-latest.json` + parte `feeds/last-run.md`
+  (legibles sin entrar en GitHub); el commit del robot lleva `[skip ci]`
+  para no re-ejecutarse en bucle.
 - Pool en `pool_fuentes_50.md`: 8 fijas + rotativas A/B/C/D.
   Verificación real de lectura: A 26/26 · B 23/23 · C 22/22 · D 21/21.
   Caídas sustituidas (Wikiloc, cines oficiales, museos, FIT/South, CaixaForum…).
 - Cines finales: los 4 pedidos vía eCartelera + dedup por título.
 - Excluidos: deporte, toros, religioso y flamenco (dirección).
-- Pendiente del director: cuenta/repo GitHub + `GEMINI_KEY` en Secrets.
-  Después: cambiar una línea (`DEFAULT_APPS_SCRIPT_URL` → raw feeds/feed-latest.json),
-  probar botón manual y activar semanal.
+- Pendiente del director: pegar llave de despliegue (Settings → Deploy keys)
+  + activar Pages. Después: primera subida mía, prueba auto y cambio de
+  dirección en la app a `feeds/feed-latest.json`.

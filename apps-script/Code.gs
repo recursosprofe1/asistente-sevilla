@@ -44,9 +44,9 @@ function getGeminiModel_() {
   } catch (e) { /* sin propiedades: sigue al fallback */ }
   return GEMINI_MODEL_FALLBACK;
 }
-// gemini-2.0-flash APAGADO por Google el 01/06/2026. 2.5-flash sigue gratis
-// (texto gratis + Google interno gratis hasta 500/día; usamos 1/semana).
-var GEMINI_MODEL_FALLBACK = 'gemini-2.5-flash';
+// gemini-2.0-flash APAGADO por Google el 01/06/2026 y la familia 2.x
+// bloqueada a cuentas nuevas. 3.6-flash es el estable actual (gratis en texto).
+var GEMINI_MODEL_FALLBACK = 'gemini-3.6-flash';
 
 var SHEET_FEED = 'published_feed';
 var SPREADSHEET_ID = ''; // vacío = hoja vinculada al proyecto

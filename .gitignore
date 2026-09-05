@@ -15,6 +15,7 @@ capturas/
 
 # Logs y temporales
 *.log
+.vite/
 .DS_Store
 Thumbs.db
 

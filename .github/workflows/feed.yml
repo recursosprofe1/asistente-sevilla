@@ -1,7 +1,13 @@
 name: Feed semanal
 
 on:
-  # Botón manual: pruebas, las veces que sean (con grupo A/B/C/D elegible)
+  # Cada subida de código prueba la cocina sola (sin botón ni clics)
+  push:
+    paths:
+      - 'scripts/build-feed.mjs'
+      - 'pool_fuentes_50.md'
+      - '.github/workflows/feed.yml'
+  # Botón manual: pruebas extra con grupo A/B/C/D elegible
   workflow_dispatch:
     inputs:
       grupo:
@@ -29,15 +35,15 @@ jobs:
       - name: Generar feed
         env:
           GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
-          GEMINI_MODEL: gemini-2.5-flash
+          GEMINI_MODEL: gemini-3.6-flash
           FEED_GROUP: ${{ inputs.grupo }}
         run: node scripts/build-feed.mjs
       - name: Publicar feed
         run: |
           git config user.name "asistente-bot"
           git config user.email "asistente-bot@local"
-          git add feeds/feed-latest.json feeds/feed-*.json
-          git diff --cached --quiet || git commit -m "Feed semanal $(date -u +%F)"
+          git add feeds/feed-latest.json feeds/feed-*.json feeds/last-run.md
+          git diff --cached --quiet || git commit -m "Feed semanal $(date -u +%F) [skip ci]"
           git push
       - name: Subir feed como artefacto
         uses: actions/upload-artifact@v4

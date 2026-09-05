@@ -13,7 +13,10 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
 const GEMINI_KEY = process.env.GEMINI_KEY || '';
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+// 2.0 jubilado 01/06/2026 · 2.x bloqueado a cuentas nuevas → 3.6-flash (estable).
+// Cadena de repuesto: si un modelo muere otro día, se prueba el siguiente solo.
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+const GEMINI_FALLBACKS = ['gemini-3.5-flash', 'gemini-3.1-flash-lite'];
 const CHECK_ONLY = process.argv.includes('--check-sources');
 const VALID_DAYS = 8;
 
@@ -286,6 +289,28 @@ async function checkSources() {
   if (bad.length) { console.log('A sustituir: ' + bad.map((r) => r.name).join(', ')); process.exitCode = 2; }
 }
 
+// Llama a Gemini con cadena de repuesto. La clave viaja por cabecera
+// (nunca en la URL) para que no salga en registros.
+let MODEL_USED = '';
+async function geminiGenerate(prompt) {
+  const models = [GEMINI_MODEL, ...GEMINI_FALLBACKS.filter((m) => m !== GEMINI_MODEL)];
+  let lastErr = null;
+  for (const model of models) {
+    try {
+      const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KEY },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+      });
+      if (!resp.ok) throw new Error(`Gemini ${model} HTTP ` + resp.status + ': ' + (await resp.text()).slice(0, 300));
+      const text = (await resp.json()).candidates[0].content.parts[0].text;
+      MODEL_USED = model;
+      return { text };
+    } catch (e) { lastErr = e; console.log('Repuesto: ' + e.message); }
+  }
+  throw lastErr;
+}
+
 // ── Ejecución completa ────────────────────────────────────────
 async function fullRun() {
   if (!GEMINI_KEY) throw new Error('Falta GEMINI_KEY en el entorno (Secret del repo).');
@@ -338,12 +363,8 @@ async function fullRun() {
     context || '(sin contexto: trabaja con tu conocimiento, pero con URLs https reales)',
   ].join('\n');
 
-  const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-  });
-  if (!resp.ok) throw new Error('Gemini HTTP ' + resp.status + ': ' + (await resp.text()).slice(0, 500));
-  const raw = (await resp.json()).candidates[0].content.parts[0].text.replace(/```json/g, '').replace(/```/g, '').trim();
+  const resp = await geminiGenerate(prompt);
+  const raw = resp.text.replace(/```json/g, '').replace(/```/g, '').trim();
   const parsed = JSON.parse(raw);
 
   const planes = (parsed.planes || [])
@@ -420,7 +441,18 @@ async function fullRun() {
   const day = now.toISOString().slice(0, 10);
   writeFileSync('feeds/feed-latest.json', JSON.stringify(feed));
   writeFileSync(`feeds/feed-${day}.json`, JSON.stringify(feed));
-  console.log(`Feed: ${planes.length} planes (Sev ${nSevilla} HC ${nHC} Rutas ${nRutas}) + ${cartelera.length} pelis. Sin cubrir: ${JSON.stringify(missing)}. Grupo ${GROUP}.`);
+  // Parte legible del robot (se publica solo; sirve para revisar sin entrar).
+  const report = [
+    `# Parte ${day} ${now.toISOString().slice(11, 16)} UTC · grupo ${GROUP} · modelo ${MODEL_USED}`,
+    ``,
+    `- Estado: **${feed.status}** · Planes: **${planes.length}** (Sevilla ${nSevilla} · Huelva/Cádiz ${nHC} · Rutas ${nRutas}) · Pelis: **${cartelera.length}**`,
+    `- Cuotas sin cubrir: ${missing.length ? missing.join(', ') : 'ninguna'}`,
+    `- Fuentes con aviso: ${errors.length ? errors.join(' / ') : 'ninguna'}`,
+    `- Cines con aviso: ${cineErrors.length ? cineErrors.join(' / ') : 'ninguno'}`,
+    `- Válido hasta: ${feed.validUntil}`,
+  ].join('\n');
+  writeFileSync('feeds/last-run.md', report);
+  console.log(`Feed: ${planes.length} planes (Sev ${nSevilla} HC ${nHC} Rutas ${nRutas}) + ${cartelera.length} pelis. Sin cubrir: ${JSON.stringify(missing)}. Grupo ${GROUP}. Modelo ${MODEL_USED}.`);
 }
 
 if (CHECK_ONLY) await checkSources();
