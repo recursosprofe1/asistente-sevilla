@@ -174,6 +174,20 @@ function normCat(c) {
   return 'Varios';
 }
 function noAccents(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+// Provincia por municipio (la cocina exige municipios reales; el filtro por
+// subcadena solo no basta: "La Rinconada" o "Rota" también cuentan).
+const ZONA_MUNICIPIO = {
+  Sevilla: ['sevilla', 'rinconada', 'carmona', 'san nicolas', 'osuna', 'lebrija', 'santiponce', 'alcala', 'dos hermanas', 'utrera', 'ecija', 'mairena', 'bormujos', 'tomares', 'coria', 'guadaira', 'aljarafe', 'sierra norte', 'constantina', 'cazalla', 'alanis', 'guadalcanal', 'pedroso'],
+  Huelva: ['huelva', 'bollullos', 'moguer', 'aracena', 'ayamonte', 'lepe', 'punta umbria', 'almonte', 'rocio', 'condado', 'odiel', 'colon'],
+  Cádiz: ['cadiz', 'rota', 'olvera', 'bosque', 'grazalema', 'ubrique', 'tarifa', 'jerez', 'chiclana', 'puerto real', 'sanlucar', 'arcos', 'falla', 'iberoam'],
+};
+function zoneOf(municipality) {
+  const m = noAccents(municipality).toLowerCase();
+  for (const [zona, keys] of Object.entries(ZONA_MUNICIPIO)) {
+    if (keys.some((k) => m.includes(k))) return zona;
+  }
+  return '';
+}
 function isExcluded(title, summary) { return EXCLUDED_RE.test(noAccents(title + ' | ' + (summary || ''))); }
 function ruleTravel(municipality, isRuta) {
   if (isRuta) return 60;
@@ -395,9 +409,9 @@ async function fullRun() {
     const cat = normCat(p.categories[0]);
     counts[cat] = (counts[cat] || 0) + 1;
     if (cat === 'Rutas y naturaleza') { nRutas++; continue; }
-    const m = noAccents(p.municipality).toLowerCase();
-    if (/sevilla/.test(m)) nSevilla++;
-    else if (/huelva|cadiz/.test(m)) nHC++;
+    const z = zoneOf(p.municipality || '');
+    if (z === 'Sevilla') nSevilla++;
+    else if (z === 'Huelva' || z === 'Cádiz') nHC++;
   }
   const missing = [];
   if (nSevilla < QUOTA_SEVILLA) missing.push(`Sevilla ${nSevilla}/${QUOTA_SEVILLA}`);
