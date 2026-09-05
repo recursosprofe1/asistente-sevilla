@@ -1,14 +1,12 @@
 import React from 'react';
-import {
-  ConnSol, ConnBrujula, ConnCasa, ConnBolsa, ConnBalanza,
-} from './illustrations/ConnIcons';
+import { NavBadge } from './illustrations/FlatBadges';
 
 export const TABS = [
-  { id: 'hoy', label: 'Hoy', Icon: ConnSol },
-  { id: 'planes', label: 'Planes', Icon: ConnBrujula },
-  { id: 'casa', label: 'Casa', Icon: ConnCasa, disabled: true },
-  { id: 'compras', label: 'Compras', Icon: ConnBolsa, disabled: true },
-  { id: 'decisiones', label: 'Decisiones', Icon: ConnBalanza, disabled: true },
+  { id: 'hoy', label: 'Hoy' },
+  { id: 'planes', label: 'Planes' },
+  { id: 'casa', label: 'Casa', disabled: true },
+  { id: 'compras', label: 'Compras', disabled: true },
+  { id: 'decisiones', label: 'Decisiones', disabled: true },
 ];
 
 export default function BottomNavigation({ activeTab, onSelectTab }) {
@@ -22,7 +20,6 @@ export default function BottomNavigation({ activeTab, onSelectTab }) {
         style={{ boxShadow: '0 14px 30px -10px rgba(10, 91, 102, 0.30)' }}>
         <div className="grid grid-cols-5 gap-1">
           {TABS.map((tab) => {
-            const Icon = tab.Icon;
             const isActive = activeTab === tab.id;
             const isDisabled = !!tab.disabled;
 
@@ -36,20 +33,12 @@ export default function BottomNavigation({ activeTab, onSelectTab }) {
                 type="button"
                 aria-current={isActive ? 'page' : undefined}
                 aria-label={`Ir a ${tab.label}`}
-                className="flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all duration-200"
+                className={`flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all duration-200 ${isDisabled ? 'opacity-40 grayscale' : ''}`}
               >
-                <div
-                  className={`flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200 ${
-                    isActive
-                      ? 'bg-conn-teal text-white scale-105'
-                      : isDisabled
-                        ? 'bg-slate-100 text-slate-300'
-                        : 'bg-conn-mist text-conn-tealDark'
-                  }`}
-                  style={isActive ? { boxShadow: '0 8px 18px -6px rgba(18, 165, 181, 0.55)' } : undefined}
-                >
-                  <Icon className="w-5 h-5" />
-                </div>
+                <span className={`rounded-full transition-all duration-200 ${isActive ? 'scale-110' : ''}`}
+                  style={isActive ? { outline: '3px solid #0B3B42', outlineOffset: '2px', borderRadius: '9999px' } : undefined}>
+                  <NavBadge tab={tab.id} size={44} />
+                </span>
                 <span className={`text-[10px] mt-1 tracking-tight ${isActive ? 'font-black text-conn-deep' : 'font-bold text-conn-muted'}`}>
                   {tab.label}
                 </span>

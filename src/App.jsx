@@ -7,18 +7,11 @@ import CasaTab from "./components/tabs/CasaTab";
 import ComprasTab from "./components/tabs/ComprasTab";
 import DecisionesTab from "./components/tabs/DecisionesTab";
 
-// ── Icono de la app: brújula Conn en pastilla teal ──────────
-function AppIcon({ className = "w-8 h-8" }) {
-  return (
-    <span className={`inline-flex items-center justify-center rounded-2xl bg-conn-teal text-white ${className}`}
-      style={{ boxShadow: '0 8px 18px -6px rgba(18, 165, 181, 0.55)' }}>
-      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="8.5" />
-        <path d="M15.5 8.5l-2.2 5.8-5.8 2.2 2.2-5.8 5.8-2.2z" />
-        <circle cx="12" cy="12" r="1" fill="currentColor" />
-      </svg>
-    </span>
-  );
+import { FBadge } from "./components/illustrations/FlatBadges";
+
+// ── Icono de la app: brújula maciza ───────────────────
+function AppIcon({ size = 32 }) {
+  return <FBadge name="brujula" color="#0E7E8C" size={size} />;
 }
 
 export default function App() {

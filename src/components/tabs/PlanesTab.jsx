@@ -1,9 +1,5 @@
 ﻿import React, { useState, useEffect, useRef } from "react";
-import {
-  ConnCorazon, ConnOjoOff, ConnRestaurar, ConnCheck, ConnSync, ConnSol,
-  ConnPapelera, ConnPin, ConnReloj, ConnChevron, ConnBrujula,
-} from "../illustrations/ConnIcons";
-import { ConnBadge } from "../illustrations/ConnIcons";
+import { FBadge, FGlyph, CategoryBadge } from "../illustrations/FlatBadges";
 import { db, discardPlan, restorePlan, getFeedMeta } from "../../db";
 import { syncPlansFromCloud } from "../../services/feedService";
 import {
@@ -63,7 +59,7 @@ function PlanCard({
         className="w-full text-left focus-visible:outline-2 focus-visible:outline-conn-tealDark"
       >
         <div className="flex items-center gap-3 p-4">
-          <ConnBadge category={category} size={44} />
+          <CategoryBadge category={category} size={44} />
 
           <div className="flex-1 min-w-0">
             <h3 className="font-theme-title text-[15px] font-black text-conn-deep leading-snug line-clamp-2">
@@ -75,7 +71,7 @@ function PlanCard({
               </p>
             )}
             <div className="flex items-center gap-1 mt-1.5 text-[11px] font-bold text-conn-muted">
-              <ConnPin className="w-3 h-3" />
+              <FBadge name="pin" color="#0E7E8C" size={20} />
               <span className="truncate">{plan.venue}{plan.municipality ? ` · ${plan.municipality}` : ""}</span>
             </div>
             {!showDiscarded && (isInterested || isForToday) && (
@@ -110,7 +106,7 @@ function PlanCard({
                 </span>
               )
             )}
-            <ConnChevron arriba={isExpanded} className="w-3.5 h-3.5 text-conn-muted/60" />
+            <FGlyph name={isExpanded ? "chevronUp" : "chevronDown"} size={14} color="#5E8B91" />
           </div>
         </div>
 
@@ -143,7 +139,7 @@ function PlanCard({
             aria-pressed={isInterested}
             className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-red-50 active:scale-90 transition-all"
           >
-            <ConnCorazon lleno={isInterested} className={`w-5 h-5 ${isInterested ? "text-red-500" : "text-conn-muted/50"}`} />
+            <FBadge name="corazon" color={isInterested ? "#E5484D" : "#CBD5E1"} size={40} />
           </button>
           <button
             onClick={(e) => onToggleForToday(e, plan)}
@@ -156,7 +152,7 @@ function PlanCard({
                 : "bg-conn-mist text-conn-tealDark"
             }`}
           >
-            <ConnSol className="w-3.5 h-3.5" />
+            <FBadge name="sol" color="#F5A623" size={22} />
             {isForToday ? "En Hoy" : "Añadir a Hoy"}
           </button>
         </div>
@@ -167,7 +163,7 @@ function PlanCard({
         <div id={`plan-detalle-${plan.id}`} className="border-t border-conn-aqua px-4 py-3 space-y-3">
           {plan.startsAt && (
             <p className="text-[11px] font-bold text-conn-muted flex items-center gap-1.5">
-              <ConnReloj className="w-3 h-3" />
+              <FBadge name="reloj" color="#0E7E8C" size={20} />
               {plan.startsAt}
             </p>
           )}
@@ -188,14 +184,14 @@ function PlanCard({
               <button onClick={(e) => onRestore(e, plan.id)} type="button"
                 aria-label={`Restaurar ${plan.title}`}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black bg-conn-teal text-white active:scale-95 mx-auto min-h-[44px]">
-                <ConnRestaurar className="w-3.5 h-3.5" />
+                <FGlyph name="restaurar" size={16} color="#FFFFFF" />
                 Restaurar
               </button>
             ) : (
               <button onClick={(e) => onDiscard(e, plan.id)} type="button"
                 aria-label={`Descartar ${plan.title}`}
                 className="flex items-center gap-1 px-3 py-2 rounded-full text-xs font-bold text-conn-muted hover:text-red-500 hover:bg-red-50 transition-colors min-h-[44px]">
-                <ConnOjoOff className="w-3.5 h-3.5" />
+                <FGlyph name="ojo" size={16} color="#5E8B91" />
                 Descartar
               </button>
             )}
@@ -214,7 +210,7 @@ function CategoryCircle({ label, active, onClick, category }) {
         style={active
           ? { outline: '3px solid #0B3B42', outlineOffset: '2px', borderRadius: '9999px' }
           : undefined}>
-        <ConnBadge category={category} size={52} />
+        <CategoryBadge category={category} size={52} />
       </span>
       <span className={`text-[9px] leading-tight text-center font-black max-w-[68px] truncate ${active ? 'text-conn-deep' : 'text-conn-muted'}`}>
         {label}
@@ -440,7 +436,7 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
               aria-label="Borrar caché remota, conserva favoritos, Hoy y papelera"
               className="w-9 h-9 flex items-center justify-center rounded-full bg-white/20 text-white active:scale-95 transition-all"
             >
-              <ConnPapelera className="w-4 h-4" />
+              <FGlyph name="papelera" size={18} color="#FFFFFF" />
             </button>
             <button
               onClick={handleSyncCloud}
@@ -450,7 +446,9 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
               className="w-11 h-11 flex items-center justify-center rounded-full bg-white text-conn-tealDark active:scale-95 transition-all disabled:opacity-60"
               style={{ boxShadow: '0 8px 18px -6px rgba(0, 0, 0, 0.30)' }}
             >
-              <ConnSync className={`w-5 h-5 ${isSyncing ? "animate-spin" : ""}`} />
+              <span className={isSyncing ? "animate-spin inline-flex" : "inline-flex"}>
+                <FBadge name="sync" color="#0E7E8C" size={44} />
+              </span>
             </button>
           </div>
         </div>
@@ -580,7 +578,7 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
       {/* Toast */}
       {toast && (
         <div role="status" aria-live="polite" className="bg-conn-deep text-white text-xs px-4 py-2 rounded-full flex items-center gap-2 shadow-lg animate-fadeIn mx-1">
-          <ConnCheck className="w-3 h-3 text-conn-amber" />
+          <FBadge name="check" color="#3A9E70" size={20} />
           <span>{toast}</span>
         </div>
       )}
@@ -598,10 +596,8 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
       {/* Lista agrupada por categoría */}
       {!loadError && (sourceList.length === 0 ? (
         <div className="text-center py-12 px-4">
-          <span className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-conn-mist text-conn-tealDark mb-3">
-            <ConnBrujula className="w-7 h-7" />
-          </span>
-          <p className="font-theme-title text-[15px] font-black text-conn-deep mb-1">
+          <FBadge name="brujula" color="#0E7E8C" size={56} />
+          <p className="font-theme-title text-[15px] font-black text-conn-deep mb-1 mt-3">
             {showDiscarded ? "La papelera está vacía" : "No hay planes para este filtro"}
           </p>
           <p className="text-xs font-semibold text-conn-muted mb-4">
@@ -626,7 +622,7 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
             <section key={cat} aria-label={`Categoría ${cat}`}>
               {/* Cabecera de categoria */}
               <div className="flex items-center gap-2.5 mb-2.5 px-1">
-                <ConnBadge category={cat} size={40} />
+                <CategoryBadge category={cat} size={40} />
                 <div>
                   <p className="font-theme-title text-[15px] font-black text-conn-deep">{cat}</p>
                   <p className="text-[10px] text-conn-muted font-bold">
@@ -659,7 +655,7 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
           {showCineSection && (
             <section aria-label="Cartelera de cine de Sevilla">
               <div className="flex items-center gap-2.5 mb-2.5 px-1">
-                <ConnBadge category="Cine" size={40} />
+                <CategoryBadge category="Cine" size={40} />
                 <div>
                   <p className="font-theme-title text-[15px] font-black text-conn-deep">Cartelera de cine</p>
                   <p className="text-[10px] text-conn-muted font-bold">

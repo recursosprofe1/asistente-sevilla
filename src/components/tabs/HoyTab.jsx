@@ -1,8 +1,5 @@
 ﻿import React, { useState, useEffect, useRef } from "react";
-import {
-  ConnCheck, ConnOjoOff, ConnPin, ConnReloj, ConnCalendario, ConnBrujula,
-} from "../illustrations/ConnIcons";
-import { ConnBadge } from "../illustrations/ConnIcons";
+import { FBadge, FGlyph, CategoryBadge } from "../illustrations/FlatBadges";
 import { db, discardPlan, togglePlanForToday } from "../../db";
 import { getTodayPlans } from "../../services/planRepository";
 import { getTodayKeyMadrid, formatLongDateMadrid, getGreetingMadrid } from "../../utils/time";
@@ -91,7 +88,7 @@ export default function HoyTab({ onNavigateTab }) {
           aria-live="polite"
           className="bg-conn-deep text-white text-xs px-4 py-2 rounded-full flex items-center gap-2 shadow-lg animate-fadeIn mx-1"
         >
-          <ConnCheck className="w-3 h-3 text-conn-amber" />
+          <FBadge name="check" color="#3A9E70" size={20} />
           <span>{toast}</span>
         </div>
       )}
@@ -138,7 +135,7 @@ export default function HoyTab({ onNavigateTab }) {
                   className="w-full text-left focus-visible:outline-2 focus-visible:outline-conn-tealDark"
                 >
                   <div className="flex items-center gap-3 p-4">
-                    <ConnBadge category={category} size={56} />
+                    <CategoryBadge category={category} size={56} />
 
                     <div className="flex-1 min-w-0">
                       <p className="text-[10px] font-black text-conn-muted uppercase tracking-widest mb-0.5">
@@ -152,8 +149,8 @@ export default function HoyTab({ onNavigateTab }) {
                           {plan.summary || String(plan.longDescription).slice(0, 140)}
                         </p>
                       )}
-                      <div className="flex items-center gap-1 mt-1.5 text-[11px] font-bold text-conn-muted">
-                        <ConnPin className="w-3 h-3" />
+                      <div className="flex items-center gap-1.5 mt-1.5 text-[11px] font-bold text-conn-muted">
+                        <FBadge name="pin" color="#0E7E8C" size={20} />
                         <span className="truncate">{plan.venue}{plan.municipality ? ` · ${plan.municipality}` : ""}</span>
                       </div>
                     </div>
@@ -186,12 +183,12 @@ export default function HoyTab({ onNavigateTab }) {
                   <div id={`hoy-detalle-${plan.id}`} className="border-t border-conn-aqua px-4 py-3 space-y-3">
                     {plan.startsAt && (
                       <p className="text-[11px] font-bold text-conn-muted flex items-center gap-1.5">
-                        <ConnReloj className="w-3 h-3" />
+                        <FBadge name="reloj" color="#0E7E8C" size={20} />
                         Fecha del evento: {plan.startsAt}
                       </p>
                     )}
                     <p className="text-[11px] font-bold text-conn-muted/70 flex items-center gap-1.5">
-                      <ConnCalendario className="w-3 h-3" />
+                      <FBadge name="calendario" color="#5E8B91" size={20} />
                       Añadido a Hoy hoy · la selección se renueva cada día
                     </p>
 
@@ -214,7 +211,7 @@ export default function HoyTab({ onNavigateTab }) {
                         aria-label={`Descartar ${plan.title}`}
                         className="flex items-center gap-1 px-3 py-2 rounded-full text-xs font-bold text-conn-muted hover:text-red-500 hover:bg-red-50 transition-colors min-h-[44px]"
                       >
-                        <ConnOjoOff className="w-3.5 h-3.5" />
+                        <FGlyph name="ojo" size={16} color="#5E8B91" />
                         Descartar
                       </button>
                       <button
@@ -235,10 +232,8 @@ export default function HoyTab({ onNavigateTab }) {
         {/* Estado vacío */}
         {!isLoading && !loadError && plans.length === 0 && (
           <div className="conn-card text-center py-12 px-6">
-            <span className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-conn-mist text-conn-tealDark mb-3">
-              <ConnBrujula className="w-7 h-7" />
-            </span>
-            <p className="font-theme-title text-[15px] font-black text-conn-deep mb-1">Nada seleccionado para hoy</p>
+            <FBadge name="brujula" color="#0E7E8C" size={56} />
+            <p className="font-theme-title text-[15px] font-black text-conn-deep mb-1 mt-3">Nada seleccionado para hoy</p>
             <p className="text-xs font-semibold text-conn-muted mb-4">
               En Planes, elige un plan y toca &quot;Añadir a Hoy&quot;. La selección se renueva cada día.
             </p>

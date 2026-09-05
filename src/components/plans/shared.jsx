@@ -1,5 +1,5 @@
 import React from 'react';
-import { ConnExtern, ConnSpark } from '../illustrations/ConnIcons';
+import { FBadge, FGlyph } from '../illustrations/FlatBadges';
 
 export function CineMovies({ longDescription }) {
   let peliculas = null;
@@ -31,7 +31,7 @@ export function CineMovies({ longDescription }) {
               onClick={(e) => e.stopPropagation()}
               className="inline-flex items-center gap-1 text-[10px] font-extrabold text-conn-tealDark hover:underline"
             >
-              <ConnExtern className="w-2.5 h-2.5" />
+              <FGlyph name="externo" size={12} color="#0E7E8C" />
               Entradas / Horarios
             </a>
           )}
@@ -49,7 +49,7 @@ export function PlanWhy({ text, tone = 'amber' }) {
       : 'bg-conn-amberSoft text-conn-deep';
   return (
     <div className={`flex items-start gap-2 rounded-2xl p-3 ${cls}`}>
-      <ConnSpark className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-conn-tealDark" />
+      <FBadge name="spark" color="#0E7E8C" size={22} />
       <p className="text-xs leading-relaxed">{text}</p>
     </div>
   );
@@ -65,7 +65,7 @@ export function PlanSourceLink({ url }) {
       onClick={(e) => e.stopPropagation()}
       className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-conn-tealDark hover:underline"
     >
-      <ConnExtern className="w-3 h-3" />
+      <FGlyph name="externo" size={14} color="#0E7E8C" />
       Más información
     </a>
   );
