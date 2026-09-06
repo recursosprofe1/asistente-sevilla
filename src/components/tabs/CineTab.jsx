@@ -361,12 +361,13 @@ export default function CineTab() {
           onView={(v) => { setView(v); setExpandedId(null); }}
           trashCount={sectionTrashCount}
         />
-        <div className="flex items-center gap-1.5 flex-wrap" role="group" aria-label="Sección de cine">
+        <div className="flex items-center gap-1.5 flex-nowrap" role="group" aria-label="Sección de cine">
           {SUBS.map((s) => (
             <SectionPill
               key={s.value}
               icon={s.icon}
               label={s.label}
+              wide
               active={sub === s.value}
               onClick={() => { setSub(s.value); setView('all'); setExpandedId(null); }}
             />

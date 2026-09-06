@@ -82,7 +82,7 @@ const POOL = [
   { name: 'Cerámica Triana', url: 'https://icas.sevilla.org/espacios/centro-ceramica', zona: 'Sevilla', grupo: 'D' },
   // HUELVA (6 directas + 2 refuerzos documentados)
   { name: 'entradas.huelva.es', url: 'https://entradas.huelva.es/', zona: 'Huelva', grupo: 'A' },
-  { name: 'Diputación Huelva', url: 'https://www.diphuelva.es/cultura/', zona: 'Huelva', grupo: 'A' },
+  { name: 'Patronato Turismo Huelva', url: 'https://www.turismohuelva.org/', zona: 'Huelva', grupo: 'A' },
   { name: 'Moguer (Junta)', url: 'https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/actividades/moguer', zona: 'Huelva', grupo: 'B' },
   { name: 'Almonte (Junta)', url: 'https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/actividades/almonte', zona: 'Huelva', grupo: 'B' },
   { name: 'Aracena (Junta)', url: 'https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/actividades/aracena', zona: 'Huelva', grupo: 'C' },
@@ -219,6 +219,172 @@ function coerceTravel(v, municipality, isRuta) {
 function normTitle(s) {
   return noAccents(s).toLowerCase().replace(/\b(3d|2d|4dx|imax|vo|vose|vos|doblada|subtitulada|estreno)\b/g, ' ')
     .replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+function cleanJson(t) { return String(t || '').replace(/```json/g, '').replace(/```/g, '').trim(); }
+const nowIso = (d = new Date()) => d.toISOString();
+
+// ── Fuentes autónomas: salud, jubilación y recambios ─────────────────
+// feeds/fuentes-estado.json es el censo del pool: cada fuente tiene estado
+// ('activa' | 'ensayo' | 'baja'), rachas de aciertos/errores y una cola de
+// alternativas. Reglas duras, sin IA:
+//  · 'activa' con 2 fallos seguidos    -> se jubila ('baja').
+//  · 'ensayo' con 2 lecturas OK        -> se promociona a 'activa'.
+//  · 'ensayo' con 3 fallos             -> se jubila.
+// Cuando un hueco queda vacante, la cocina intenta sus alternativas validadas
+// y, si se agotan, pide candidatas a Gemini (1 llamada gratis) y solo entra
+// lo que SUPERA la validación de lectura (fetchText + >=6 candidatos reales).
+// Una URL inventada no puede colarse: no pasa el filtro del robot.
+const ESTADO_PATH = 'feeds/fuentes-estado.json';
+const normZona = (z) => noAccents(String(z || '')).toLowerCase().trim();
+
+function seedEstado() {
+  const sources = {};
+  for (const f of FRESH_FIXED) {
+    sources[f.url] = { name: f.name, zona: f.zona, grupo: 'fija', state: 'activa', okStreak: 0, failStreak: 0, alta: nowIso(), alternativas: [], lastError: null, reemplazadoPor: null };
+  }
+  for (const p of POOL) {
+    sources[p.url] = { name: p.name, zona: p.zona, grupo: p.grupo, state: 'activa', okStreak: 0, failStreak: 0, alta: nowIso(), alternativas: [], lastError: null, reemplazadoPor: null };
+  }
+  return { version: 1, updated: null, sources };
+}
+
+function cargarEstado(path = ESTADO_PATH) {
+  try {
+    const e = JSON.parse(readFileSync(path, 'utf8'));
+    if (e && e.version === 1 && e.sources) {
+      const seed = seedEstado();
+      for (const [u, m] of Object.entries(seed.sources)) if (!e.sources[u]) e.sources[u] = m;
+      return e;
+    }
+  } catch { /* primera ejecución o formato viejo: semilla del código */ }
+  return seedEstado();
+}
+
+function guardarEstado(estado, path = ESTADO_PATH) {
+  try { mkdirSync('feeds', { recursive: true }); writeFileSync(path, JSON.stringify(estado, null, 1)); } catch { /* que no rompa el run */ }
+}
+
+function fuentesActivas(estado, group) {
+  const fijas = [];
+  const rotativas = [];
+  for (const [url, m] of Object.entries(estado.sources)) {
+    if (m.state === 'baja') continue;
+    const src = { name: m.name, url, zona: m.zona };
+    if (m.grupo === 'fija') fijas.push(src);
+    else if (m.grupo === group) rotativas.push(src);
+  }
+  return { fijas, rotativas };
+}
+
+// Aplica el resultado de una lectura. Devuelve la acción de vida ocurrida.
+function aplicarResultado(estado, url, ok, errText) {
+  const m = estado.sources[url];
+  if (!m) return null;
+  if (ok) { m.okStreak = (m.okStreak || 0) + 1; m.failStreak = 0; m.lastError = null; }
+  else { m.failStreak = (m.failStreak || 0) + 1; m.okStreak = 0; m.lastError = String(errText || '').slice(0, 160); }
+  if (m.state === 'ensayo' && m.okStreak >= 2) { m.state = 'activa'; return 'promocion'; }
+  const limite = m.state === 'ensayo' ? 3 : 2;
+  if (m.state !== 'baja' && m.failStreak >= limite) { m.state = 'baja'; return 'jubilacion'; }
+  return null;
+}
+
+function huecosVacantes(estado) {
+  return Object.entries(estado.sources).filter(([, m]) => m.state === 'baja' && !m.reemplazadoPor && m.zona !== 'Cine');
+}
+
+function parseCandidatos(text) {
+  try {
+    const obj = JSON.parse(cleanJson(text));
+    const out = [];
+    for (const c of (Array.isArray(obj?.candidatos) ? obj.candidatos : [])) {
+      if (!c || !c.nombre || !c.url || !c.zona) continue;
+      const u = String(c.url).trim();
+      if (!/^https:\/\//i.test(u)) continue;
+      out.push({ nombre: String(c.nombre).slice(0, 60), url: u, zona: String(c.zona).trim() });
+    }
+    return out;
+  } catch { return []; }
+}
+
+async function validarFuente(src) {
+  try {
+    const lines = await fetchSource(src);
+    return lines.length >= 6;
+  } catch { return false; }
+}
+
+function darDeAlta(estado, bajaUrl, bajaM, c, altas) {
+  estado.sources[c.url] = {
+    name: c.nombre, zona: bajaM.zona, grupo: bajaM.grupo, state: 'ensayo',
+    okStreak: 1, failStreak: 0, alta: nowIso(), alternativas: [], lastError: null, reemplazadoPor: null
+  };
+  estado.sources[bajaUrl].reemplazadoPor = c.url;
+  altas.push(c.nombre);
+}
+
+function promptRecambio(vacantes) {
+  return [
+    'Necesito sustituir fuentes de agenda cultural de Sevilla/Huelva/Cadiz que han muerto o bloquean al robot.',
+    'Huecos a cubrir (nombre y zona): ' + vacantes.map((m) => `${m.name} [${m.zona}]`).join('; ') + '.',
+    'Devuelve SOLO un JSON valido, sin markdown, con esta forma exacta:',
+    '{ "candidatos": [ { "nombre": "Fuente (organizacion)", "url": "https://...", "zona": "Sevilla|Huelva|Cadiz|Rutas" } ] }',
+    '4 candidatos por hueco, con la ZONA exacta del hueco.',
+    'Requisitos: webs que existan de verdad hoy; portada o pagina de agenda con listado publico de eventos (ayuntamientos, diputaciones, patronatos de turismo, teatros publicos, recintos culturales, festivales);',
+    'HTML normal con enlaces visibles a los eventos (no apps de un solo enlace "cargar mas", ni muro de cookies), https.',
+    'Prohibido: deporte, taurino, religioso, flamenco monografico, agregadores que copian de otras agendas.',
+    'No inventes URLs: si dudas de una, omite esa.'
+  ].join('\n');
+}
+
+// Busca recambio para todos los huecos vacantes. Primero la cola de
+// alternativas (barato), luego UNA sola llamada IA para lo que falte.
+async function buscarReemplazos(estado) {
+  const altas = [];
+  let aviso = null;
+  let pendientes = huecosVacantes(estado);
+  if (!pendientes.length) return { altas, aviso };
+
+  for (const [url, m] of pendientes) {
+    while (m.alternativas?.length) {
+      const alt = m.alternativas.shift();
+      const ok = await validarFuente({ name: m.name, url: alt, zona: m.zona });
+      if (ok) { darDeAlta(estado, url, m, { nombre: `${m.name} (recambio)`, url: alt, zona: m.zona }, altas); break; }
+    }
+  }
+
+  pendientes = huecosVacantes(estado);
+  if (!pendientes.length) return { altas, aviso };
+
+  let candidatos = [];
+  try {
+    const resp = await geminiGenerate(promptRecambio(pendientes.map(([, m]) => m)));
+    candidatos = parseCandidatos(resp.text);
+  } catch (e) {
+    return { altas, aviso: 'busqueda de recambios falló: ' + String(e.message || e).slice(0, 140) };
+  }
+
+  const conocidas = new Set(Object.keys(estado.sources));
+  const validadas = [];
+  for (const c of candidatos.slice(0, 10)) {
+    if (conocidas.has(c.url)) continue;
+    const ok = await validarFuente({ name: c.nombre, url: c.url, zona: c.zona });
+    if (ok) { validadas.push(c); conocidas.add(c.url); }
+  }
+
+  for (const [url, m] of pendientes) {
+    if (m.reemplazadoPor) continue;
+    const idx = validadas.findIndex((c) => normZona(c.zona) === normZona(m.zona));
+    if (idx === -1) { aviso = `sin recambio validado para ${m.name} (${m.zona})`; continue; }
+    const [c] = validadas.splice(idx, 1);
+    darDeAlta(estado, url, m, c, altas);
+    const restoIdx = validadas.map((v, i) => [v, i]).filter(([v]) => normZona(v.zona) === normZona(m.zona)).map(([, i]) => i);
+    const restoUrls = restoIdx.map((i) => validadas[i].url);
+    if (restoUrls.length) {
+      estado.sources[c.url].alternativas = restoUrls;
+      for (const i of [...restoIdx].reverse()) validadas.splice(i, 1);
+    }
+  }
+  return { altas, aviso };
 }
 function toIsoMadrid(d) {
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZoneName: 'longOffset' }).formatToParts(d);
@@ -391,9 +557,10 @@ function backfillFromArchive(feeds, family, bannedTitles, nowMs, limit) {
 
 // ── Prueba de lectura ─────────────────────────────────────────
 async function checkSources() {
-  const rotating = POOL.filter((s) => s.grupo === GROUP);
-  const all = [...FRESH_FIXED, ...rotating];
-  console.log(`Grupo semanal: ${GROUP} (semana ISO ${isoWeekNumber()}) — ${all.length} fuentes (${FRESH_FIXED.length} fijas + ${rotating.length} rotativas)`);
+  const estado = cargarEstado();
+  const { fijas, rotativas } = fuentesActivas(estado, GROUP);
+  const all = [...fijas, ...rotativas];
+  console.log(`Grupo semanal: ${GROUP} (semana ISO ${isoWeekNumber()}) — ${all.length} fuentes (${fijas.length} fijas + ${rotativas.length} rotativas) segun censo`);
   const results = await mapLimit(all, 4, async (src) => {
     try {
       const t0 = Date.now();
@@ -471,10 +638,13 @@ async function geminiGenerate(prompt) {
 // ── Ejecución completa ────────────────────────────────────────
 async function fullRun() {
   if (!GEMINI_KEY) throw new Error('Falta GEMINI_KEY en el entorno (Secret del repo).');
-  const rotating = POOL.filter((s) => s.grupo === GROUP);
-  const all = [...FRESH_FIXED, ...rotating];
+  const estado = cargarEstado();
+  const { fijas, rotativas } = fuentesActivas(estado, GROUP);
+  const all = [...fijas, ...rotativas];
   const lines = [];
   const errors = [];
+  const bajas = [];
+  const promociones = [];
   const settled = await mapLimit(all, 4, async (src) => {
     try { return { src, lines: await fetchSource(src) }; }
     catch {
@@ -484,9 +654,28 @@ async function fullRun() {
     }
   });
   for (const r of settled) {
-    if (r.lines) lines.push(...r.lines);
-    else errors.push(`${r.src.name}: ${r.error}`);
+    if (r.lines) {
+      lines.push(...r.lines);
+      const acc = aplicarResultado(estado, r.src.url, true);
+      if (acc === 'promocion') promociones.push(r.src.name);
+    } else {
+      errors.push(`${r.src.name}: ${r.error}`);
+      const acc = aplicarResultado(estado, r.src.url, false, r.error);
+      if (acc === 'jubilacion') bajas.push(r.src.name);
+    }
   }
+  try {
+    const reb = await buscarReemplazos(estado);
+    if (reb.altas.length) console.log(`Recambios dados de alta (en pruebas): ${reb.altas.join(', ')}.`);
+    if (reb.aviso) { console.log('Recambios: ' + reb.aviso); errors.push('recambios: ' + reb.aviso); }
+    if (bajas.length) console.log(`Fuentes jubiladas: ${bajas.join(', ')}.`);
+    if (promociones.length) console.log(`Fuentes promocionadas (2 lecturas OK en pruebas): ${promociones.join(', ')}.`);
+  } catch (e) {
+    errors.push('recambios: fallo inesperado (' + String(e.message || e).slice(0, 120) + ')');
+  }
+  // El censo se guarda SIEMPRE (jubilar/promocionar vale aunque la búsqueda fallen).
+  estado.updated = toIsoMadrid(new Date());
+  guardarEstado(estado);
   const seenU = new Set();
   const deduped = lines.filter((l) => {
     const um = l.match(/https?:\/\/\S+/);
@@ -618,7 +807,6 @@ async function fullRun() {
     }
     return out;
   };
-  const cleanJson = (t) => t.replace(/```json/g, '').replace(/```/g, '').trim();
 
   let series = [], movies = [], places = [];
   const avMissing = [], foodMissing = [];
@@ -744,6 +932,7 @@ async function fullRun() {
     `- Estado: **${feed.status}** · Planes: **${planes.length}** (Sevilla ${nSevilla} · Huelva/Cádiz ${nHC} · Rutas ${nRutas}) · Pelis: **${cartelera.length}** · Series: **${series.length}** · Cine-casa: **${movies.length}** · Comer: **${places.length}**`,
     `- Cuotas sin cubrir: ${[...missing, ...avMissing, ...foodMissing].length ? [...missing, ...avMissing, ...foodMissing].join(', ') : 'ninguna'}`,
     `- Fuentes con aviso: ${errors.length ? errors.join(' / ') : 'ninguna'}`,
+    `- Censo de fuentes: ${Object.values(estado.sources).filter((m) => m.state === 'activa').length} activas · ${Object.values(estado.sources).filter((m) => m.state === 'ensayo').length} en pruebas${bajas.length ? ` · jubiladas HOY: ${bajas.join(', ')}` : ''}${promociones.length ? ` · promocionadas: ${promociones.join(', ')}` : ''}`,
     `- Cines con aviso: ${cineErrors.length ? cineErrors.join(' / ') : 'ninguno'}`,
     `- Válido hasta: ${feed.validUntil}`,
     `- Perfil del usuario: ${PERFIL.applied ? 'aplicado (' + (USER_PERFIL?.generatedAt || 'sin fecha') + ')' : 'semilla del cuestionario'}`,
@@ -760,4 +949,4 @@ if (isMainModule) {
 }
 
 // Exportados para tests (Vitest) sin ejecutar la cocina al importar.
-export { normCat, zoneOf, toIsoMadrid, isoWeekNumber, coerceTravel, normTitle, isExcluded, recentFeedTitles, backfillFromArchive, feedDayMs, NO_REPEAT_DAYS, effectiveProfile, loadUserPerfil };
+export { normCat, zoneOf, toIsoMadrid, isoWeekNumber, coerceTravel, normTitle, isExcluded, recentFeedTitles, backfillFromArchive, feedDayMs, NO_REPEAT_DAYS, effectiveProfile, loadUserPerfil, seedEstado, cargarEstado, fuentesActivas, aplicarResultado, huecosVacantes, parseCandidatos, darDeAlta };

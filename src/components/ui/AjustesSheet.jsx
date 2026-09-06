@@ -209,6 +209,10 @@ export default function AjustesSheet({ open, onClose }) {
             </button>
           </div>
         </section>
+
+        <p className="text-[9px] font-bold text-conn-muted/60 text-center pt-1">
+          Iconos: Noto Emoji (Google), Apache 2.0 · Asistente Sevilla
+        </p>
       </div>
     </div>
   );

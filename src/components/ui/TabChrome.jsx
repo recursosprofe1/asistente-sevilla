@@ -52,18 +52,21 @@ export function ControlsCard({ children }) {
 }
 
 // Pastilla de sección: glifo + texto (activo = teal relleno).
-export function SectionPill({ icon, label, active, onClick }) {
+// `wide` = ocupa su trozo de fila sin dejar que el grupo haga wrap.
+export function SectionPill({ icon, label, active, onClick, wide = false }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full min-h-[36px] text-xs font-black transition-all active:scale-95 ${
+      className={`flex items-center rounded-full min-h-[36px] text-xs font-black transition-all active:scale-95 whitespace-nowrap ${
+        wide ? 'flex-1 min-w-0 justify-center gap-1 px-1.5' : 'gap-1.5 px-3.5'
+      } ${
         active ? 'bg-conn-teal text-white' : 'bg-conn-aqua text-conn-muted'
       }`}
       style={active ? { boxShadow: '0 8px 16px -8px rgba(18, 165, 181, 0.7)' } : undefined}
     >
-      <FGlyph name={icon} size={18} />
+      {wide ? <FGlyph name={icon} size={15} /> : <FGlyph name={icon} size={18} />}
       {label}
     </button>
   );

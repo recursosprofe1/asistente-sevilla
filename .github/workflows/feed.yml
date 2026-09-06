@@ -58,7 +58,7 @@ jobs:
           git config user.email "asistente-bot@local"
           # Si la app subió perfil.json durante el run, integrar antes de empujar.
           git pull --rebase --autostash origin main
-          git add feeds/feed-latest.json feeds/feed-*.json feeds/last-run.md
+          git add feeds/feed-latest.json feeds/feed-*.json feeds/last-run.md feeds/fuentes-estado.json
           git diff --cached --quiet || git commit -m "Feed semanal $(date -u +%F) [skip ci]"
           git push
       - name: Subir feed como artefacto

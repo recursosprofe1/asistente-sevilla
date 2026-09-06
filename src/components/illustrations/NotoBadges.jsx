@@ -177,6 +177,27 @@ export function RecoBadge({ kind, size = 44 }) {
   return <FBadge name={b.glyph} color={b.color} size={size} />;
 }
 
+/** Logo de la app: máscaras de teatro (🎭) como protagonista + guitarra
+ *  (🎸) en esfera menor — "escena y música", el resumen del ocio. Misma
+ *  técnica de composición que el calendario-add. */
+export function LogoBadge({ size = 32, color = '#0E7E8C' }) {
+  const s = Number(size) || 32;
+  const glyph = Math.round(s * 0.7);
+  const badge = Math.round(s * 0.48);
+  const mini = Math.round(s * 0.3);
+  return (
+    <span className="flex-shrink-0 inline-block relative" style={{ width: s, height: s }}>
+      <Disc color={color} size={s}>
+        <img src={URLS['1f3ad']} alt="" width={glyph} height={glyph} draggable={false} />
+      </Disc>
+      <span className="absolute -bottom-0.5 -right-0.5 rounded-full flex items-center justify-center bg-white overflow-hidden"
+        style={{ width: badge, height: badge, border: '1.5px solid #fff', boxShadow: '0 2px 6px -1px rgba(11,59,66,0.4)' }}>
+        <img src={URLS['1f3b8']} alt="" width={mini} height={mini} draggable={false} />
+      </span>
+    </span>
+  );
+}
+
 /** Glifo suelto (sin disco) para interiores ya coloreados. */
 export function FGlyph({ name, size = 16, color }) {
   void color;

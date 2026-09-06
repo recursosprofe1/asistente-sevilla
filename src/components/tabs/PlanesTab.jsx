@@ -253,7 +253,6 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
   const [loadError, setLoadError] = useState("");
   const [showPrevious, setShowPrevious] = useState(false);
   const [staleCount, setStaleCount] = useState(0);
-  const [totalCount, setTotalCount] = useState(0);
   const toastTimer = useRef(null);
   const [todayKey, setTodayKey] = useState(getTodayKeyMadrid);
 
@@ -263,7 +262,6 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
       const visible = await getVisiblePlans({ includeStale });
       setPlans(rankPlans(visible));
       const all = await db.plans.toArray();
-      setTotalCount(all.length);
       setDiscardedPlans(
         all
           .filter((p) => p.userStatus === 'discarded' || p.status === 'discarded')
@@ -433,22 +431,7 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
         )}
       </TabHero>
 
-      <details className="bg-white rounded-3xl px-4 py-2.5 mx-1" style={{ boxShadow: '0 8px 20px -12px rgba(10, 91, 102, 0.25)' }}>
-        <summary className="text-xs font-black text-conn-muted cursor-pointer min-h-[40px] flex items-center">
-          Diagnóstico: {totalCount} en base · {plans.length} visibles · {discardedPlans.length} en papelera
-        </summary>
-        <div className="text-xs font-semibold text-conn-muted space-y-1 pb-2 pt-1" role="status">
-          <p>Retirados del feed (ocultos): {staleCount}</p>
-          <p>Última sincronización: {feedMeta?.lastSyncedAt ? new Date(feedMeta.lastSyncedAt).toLocaleString('es-ES') : 'nunca'}</p>
-          <p>Generado por el feed: {feedMeta?.generatedAt || 'sin dato'}</p>
-          <p>Válido hasta: {feedMeta?.validUntil || 'sin dato'}</p>
-          <p>Hash del feed: {feedMeta?.feedHash ? String(feedMeta.feedHash).slice(0, 12) : 'sin dato'}</p>
-          <p>Iconos: Noto Emoji (Google), Apache 2.0</p>
-          <p>Versión de esquema: {feedMeta?.schemaVersion ?? 'sin dato'}</p>
-        </div>
-      </details>
-
-      {/* Control de tiempo + filtros */}
+      {/* Caja de control: frase + trío papelera/lupa/corazon, radios y categorias */}
       <div className="conn-card p-4">
         <div className="mb-2.5">
           <ControlsHeader question="¿Hasta dónde viajas hoy?" view={view} onView={setView} trashCount={discardedPlans.length} />

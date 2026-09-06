@@ -8,11 +8,11 @@ import CineTab from "./components/tabs/CineTab";
 import ComerTab from "./components/tabs/ComerTab";
 // Casa/Compras/Decisiones ocultas de momento (código intacto, sin usar).
 
-import { FBadge } from "./components/illustrations/NotoBadges";
+import { LogoBadge } from "./components/illustrations/NotoBadges";
 
-// ── Icono de la app: brújula maciza ───────────────────
+// ── Icono de la app: máscaras de teatro + guitarra ────────────
 function AppIcon({ size = 32 }) {
-  return <FBadge name="brujula" color="#0E7E8C" size={size} />;
+  return <LogoBadge size={size} color="#0E7E8C" />;
 }
 
 export default function App() {
