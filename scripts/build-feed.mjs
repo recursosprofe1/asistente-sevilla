@@ -476,8 +476,10 @@ async function fullRun() {
       .replace(/```json/g, '').replace(/```/g, '').trim();
     const av = JSON.parse(avRaw);
     const noTerror = (t) => !/terror|reality|telenovela/i.test(`${t.title || ''} ${(t.genres || []).join(' ')}`);
+    const rawS = (av.series || []).length, rawM = (av.movies || []).length;
     series = notBefore(av.series).filter((p) => noTerror(p) && p.sourceUrl && /^https:\/\//i.test(p.sourceUrl)).map((p) => normalizeSerie(p, nowMs)).slice(0, 8);
     movies = notBefore(av.movies).filter((p) => p.sourceUrl && /^https:\/\//i.test(p.sourceUrl)).map((p) => normalizeMovie(p, nowMs)).slice(0, 8);
+    console.log(`AV embudo: series ${rawS} brutas → ${series.length} válidas · pelis ${rawM} brutas → ${movies.length} válidas.`);
     series.forEach((s, i) => { if (i >= 5) s.reserve = true; });
     movies.forEach((m, i) => { if (i >= 5) m.reserve = true; });
     if (series.length < 8) avMissing.push(`Series ${series.length}/8`);
@@ -489,9 +491,11 @@ async function fullRun() {
     const foodRaw = (await geminiGenerate(buildFoodPrompt(TASTE_SEED))).text
       .replace(/```json/g, '').replace(/```/g, '').trim();
     const food = JSON.parse(foodRaw);
+    const rawP = (food.places || []).length;
     places = notBefore(food.places)
       .filter((p) => p.zone && p.sourceUrl && /^https:\/\//i.test(p.sourceUrl))
       .map((p) => normalizePlace(p, nowMs)).slice(0, 14);
+    console.log(`Comer embudo: ${rawP} brutos → ${places.length} válidos.`);
     places.forEach((pl, i) => { if (i >= 10) pl.reserve = true; });
     if (places.length < 14) foodMissing.push(`Comer ${places.length}/14`);
   } catch (e) {
