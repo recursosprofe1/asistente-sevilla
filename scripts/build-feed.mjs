@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * Cocina del feed — Asistente Sevilla (v4 pool 50, sin Tavily, coste 0).
  *
@@ -10,7 +9,8 @@
  * Modelo gratis: gemini-2.5-flash (texto + grounding gratis en free tier).
  */
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import {
   TASTE_SEED, buildAudiovisualPrompt, buildFoodPrompt,
   normalizeSerie, normalizeMovie, normalizePlace
@@ -221,9 +221,13 @@ function normTitle(s) {
     .replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
 function toIsoMadrid(d) {
-  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).formatToParts(d);
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZoneName: 'longOffset' }).formatToParts(d);
   const g = (t) => parts.find((p) => p.type === t).value;
-  return `${g('year')}-${g('month')}-${g('day')}T${g('hour')}:${g('minute')}:${g('second')}+01:00`;
+  // "GMT+02:00" en verano, "GMT+01:00" en invierno, "GMT" si coincidió.
+  const raw = g('timeZoneName');
+  const offset = raw === 'GMT' ? '+00:00' : raw.replace('GMT', '');
+  const hour = String(Number(g('hour')) % 24).padStart(2, '0'); // evita "24" en medianoche
+  return `${g('year')}-${g('month')}-${g('day')}T${hour}:${g('minute')}:${g('second')}${offset}`;
 }
 
 async function fetchText(url, timeoutMs = 20000) {
@@ -261,7 +265,7 @@ function extractCandidates(html, baseUrl) {
     seen.add(url + '|' + title);
     const idx = m.index;
     const around = String(html).slice(Math.max(0, idx - 600), idx + 600).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-    const dm = around.match(/(\d{1,2}\s+de\s+[a-záéíóúñ]+|\d{1,2}[\/-]\d{1,2}([\/-]\d{2,4})?)/i);
+    const dm = around.match(/(\d{1,2}\s+de\s+[a-záéíóúñ]+|\d{1,2}[-/]\d{1,2}([-/]\d{2,4})?)/i);
     items.push({ title, url, dateHint: dm ? dm[0] : '', snippet: around.slice(0, 160) });
     if (items.length >= 12) break;
   }
@@ -279,6 +283,62 @@ async function mapLimit(arr, limit, fn) {
   const out = [];
   for (let i = 0; i < arr.length; i += limit) {
     out.push(...await Promise.all(arr.slice(i, i + limit).map(fn)));
+  }
+  return out;
+}
+
+// ── Ventana anti-repetición y archivo de feeds (recos) ─────────────
+// Regla pactada: no repetir lo servido en los últimos NO_REPEAT_DAYS;
+// a partir de la 3ª semana la repetición es válida (y sirve de relleno).
+const NO_REPEAT_DAYS = 14;
+const AV_TARGET = 8, AV_MIN = 5, FOOD_TARGET = 14, FOOD_MIN = 8;
+
+function loadDatedFeeds(dir = 'feeds') {
+  const out = [];
+  let names = [];
+  try { names = readdirSync(dir); } catch { return out; }
+  for (const n of names) {
+    const m = n.match(/^feed-(\d{4}-\d{2}-\d{2})\.json$/);
+    if (!m) continue;
+    try { out.push({ day: m[1], data: JSON.parse(readFileSync(`${dir}/${n}`, 'utf8')) }); } catch { /* corrupto: se ignora */ }
+  }
+  return out.sort((a, b) => a.day.localeCompare(b.day));
+}
+
+function feedDayMs(day) { return Date.parse(day + 'T12:00:00Z'); }
+
+// Títulos (minúsculas, sin espacios sobrantes) servidos dentro de la ventana.
+function recentFeedTitles(feeds, nowMs, windowDays = NO_REPEAT_DAYS) {
+  const cutoff = nowMs - windowDays * 86400000;
+  const sets = { series: new Set(), movies: new Set(), places: new Set() };
+  for (const f of feeds) {
+    if (!(feedDayMs(f.day) >= cutoff)) continue;
+    for (const k of Object.keys(sets)) {
+      for (const it of (f.data?.[k] || [])) {
+        if (it && it.title) sets[k].add(String(it.title).toLowerCase().trim());
+      }
+    }
+  }
+  return sets;
+}
+
+// Relleno: entradas del archivo fuera de ventana (día más reciente primero),
+// sin repetir títulos ya aceptados. Devuelve crudos (el llamar los normaliza).
+function backfillFromArchive(feeds, family, bannedTitles, nowMs, limit) {
+  if (limit <= 0) return [];
+  const cutoff = nowMs - NO_REPEAT_DAYS * 86400000;
+  const seen = new Set([...bannedTitles].map((t) => String(t).toLowerCase().trim()));
+  const out = [];
+  const sorted = [...feeds].sort((a, b) => b.day.localeCompare(a.day));
+  for (const f of sorted) {
+    if (feedDayMs(f.day) >= cutoff) continue;
+    for (const it of (f.data?.[family] || [])) {
+      const key = String(it?.title || '').toLowerCase().trim();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      out.push(it);
+      if (out.length >= limit) return out;
+    }
   }
   return out;
 }
@@ -350,7 +410,7 @@ async function fullRun() {
   const errors = [];
   const settled = await mapLimit(all, 4, async (src) => {
     try { return { src, lines: await fetchSource(src) }; }
-    catch (e1) {
+    catch {
       await new Promise((r) => setTimeout(r, 3000));
       try { return { src, lines: await fetchSource(src) }; }
       catch (e2) { return { src, error: (e2.message || String(e2)) + ' (tras reintento)' }; }
@@ -462,52 +522,113 @@ async function fullRun() {
       byTitle[key].travelMinutes = Math.min(byTitle[key].travelMinutes, m.travelMinutes);
     }
   }
-  // ── Series + pelis + sitios (con perfil de gustos + anti-repetición) ──
-  // El aprendizaje fino vive en el móvil (reordena por tu perfil local);
-  // aquí se garantiza semilla de gustos y no repetir lo ya servido.
+  // ── Series + pelis + sitios (perfil de gustos + ventana anti-repetición) ──
+  // Regla: no repetir lo servido en los últimos NO_REPEAT_DAYS (repetición
+  // permitida a partir de la 3ª semana). Los descartados del usuario tienen
+  // veto en el móvil (IDs estables), aquí no hace falta conocerlos.
+  // Red de seguridad: si una sección queda corta, 2ª pasada al modelo con el
+  // avoid-list ampliado; si sigue por debajo del mínimo, relleno con entradas
+  // del archivo ya fuera de ventana. Nunca se publica una sección vacía si el
+  // archivo tiene recursos.
   const now = new Date();
   const nowMs = now.getTime();
-  const prevTitles = new Set();
-  try {
-    const prev = JSON.parse(readFileSync('feeds/feed-latest.json', 'utf8'));
-    for (const k of ['series', 'movies', 'places']) {
-      for (const it of (prev[k] || [])) {
-        if (it && it.title) prevTitles.add(String(it.title).toLowerCase().trim());
-      }
+  const datedFeeds = loadDatedFeeds();
+  const avoid = recentFeedTitles(datedFeeds, nowMs);
+  const titlesOf = (arr) => arr.map((x) => String(x.title || '').toLowerCase().trim()).filter(Boolean);
+  const notBefore = (arr, set) => (arr || []).filter((p) => p && p.title && !set.has(String(p.title).toLowerCase().trim()));
+  const mergeCap = (main, extra, cap) => {
+    const seen = new Set(titlesOf(main));
+    const out = [...main];
+    for (const it of extra) {
+      const key = String(it.title || '').toLowerCase().trim();
+      if (!key || seen.has(key)) continue;
+      seen.add(key); out.push(it);
+      if (out.length >= cap) break;
     }
-  } catch { /* primera ejecución: sin anterior */ }
-  const notBefore = (arr) => (arr || [])
-    .filter((p) => p && p.title && !prevTitles.has(String(p.title).toLowerCase().trim()));
+    return out;
+  };
+  const cleanJson = (t) => t.replace(/```json/g, '').replace(/```/g, '').trim();
 
   let series = [], movies = [], places = [];
   const avMissing = [], foodMissing = [];
-  try {
-    const avRaw = (await geminiGenerate(buildAudiovisualPrompt(TASTE_SEED))).text
-      .replace(/```json/g, '').replace(/```/g, '').trim();
+  const noTerror = (t) => !/terror|reality|telenovela/i.test(`${t.title || ''} ${(t.genres || []).join(' ')}`);
+  const genAV = async (avoidSets) => {
+    const avRaw = cleanJson((await geminiGenerate(buildAudiovisualPrompt(TASTE_SEED, {
+      series: [...avoidSets.series], movies: [...avoidSets.movies]
+    }))).text);
     const av = JSON.parse(avRaw);
-    const noTerror = (t) => !/terror|reality|telenovela/i.test(`${t.title || ''} ${(t.genres || []).join(' ')}`);
-    const rawS = (av.series || []).length, rawM = (av.movies || []).length;
-    series = notBefore(av.series).filter((p) => noTerror(p) && p.sourceUrl && /^https:\/\//i.test(p.sourceUrl)).map((p) => normalizeSerie(p, nowMs)).slice(0, 8);
-    movies = notBefore(av.movies).filter((p) => p.sourceUrl && /^https:\/\//i.test(p.sourceUrl)).map((p) => normalizeMovie(p, nowMs)).slice(0, 8);
-    console.log(`AV embudo: series ${rawS} brutas → ${series.length} válidas · pelis ${rawM} brutas → ${movies.length} válidas.`);
-    series.forEach((s, i) => { if (i >= 5) s.reserve = true; });
-    movies.forEach((m, i) => { if (i >= 5) m.reserve = true; });
-    if (series.length < 8) avMissing.push(`Series ${series.length}/8`);
-    if (movies.length < 8) avMissing.push(`Pelis ${movies.length}/8`);
+    const s = notBefore(av.series, avoidSets.series)
+      .filter((p) => noTerror(p) && p.sourceUrl && /^https:\/\//i.test(p.sourceUrl))
+      .map((p) => normalizeSerie(p, nowMs)).slice(0, AV_TARGET);
+    const m = notBefore(av.movies, avoidSets.movies)
+      .filter((p) => p.sourceUrl && /^https:\/\//i.test(p.sourceUrl))
+      .map((p) => normalizeMovie(p, nowMs)).slice(0, AV_TARGET);
+    return { s, m };
+  };
+  try {
+    const rawP = { s: 0, m: 0 };
+    let av = await genAV(avoid);
+    series = av.s; movies = av.m;
+    rawP.s = series.length; rawP.m = movies.length;
+    if (series.length < AV_TARGET || movies.length < AV_TARGET) {
+      try {
+        const av2 = await genAV({
+          series: new Set([...avoid.series, ...titlesOf(series)]),
+          movies: new Set([...avoid.movies, ...titlesOf(movies)])
+        });
+        series = mergeCap(series, av2.s, AV_TARGET);
+        movies = mergeCap(movies, av2.m, AV_TARGET);
+        console.log(`AV 2ª pasada: series ${series.length}/${AV_TARGET} · pelis ${movies.length}/${AV_TARGET}.`);
+      } catch (e2) { console.log('AV 2ª pasada falló: ' + (e2.message || e2)); }
+    }
+    if (series.length < AV_MIN) {
+      const fill = backfillFromArchive(datedFeeds, 'series', new Set([...avoid.series, ...titlesOf(series)]), nowMs, AV_MIN - series.length)
+        .map((p) => normalizeSerie({ ...p, reserve: undefined }, nowMs));
+      series = mergeCap(series, fill, Math.max(AV_MIN, series.length));
+      if (fill.length) console.log(`AV relleno archivo: +${fill.length} series.`);
+    }
+    if (movies.length < AV_MIN) {
+      const fill = backfillFromArchive(datedFeeds, 'movies', new Set([...avoid.movies, ...titlesOf(movies)]), nowMs, AV_MIN - movies.length)
+        .map((p) => normalizeMovie({ ...p, reserve: undefined }, nowMs));
+      movies = mergeCap(movies, fill, Math.max(AV_MIN, movies.length));
+      if (fill.length) console.log(`AV relleno archivo: +${fill.length} pelis.`);
+    }
+    console.log(`AV embudo: series ${rawP.s} válidas → ${series.length} · pelis ${rawP.m} válidas → ${movies.length}.`);
+    series.forEach((s, i) => { s.reserve = i >= 5; });
+    movies.forEach((m, i) => { m.reserve = i >= 5; });
+    if (series.length < AV_TARGET) avMissing.push(`Series ${series.length}/${AV_TARGET}`);
+    if (movies.length < AV_TARGET) avMissing.push(`Pelis ${movies.length}/${AV_TARGET}`);
   } catch (e) {
     avMissing.push('Series/pelis: fallo IA (' + String(e.message || e).slice(0, 120) + ')');
   }
   try {
-    const foodRaw = (await geminiGenerate(buildFoodPrompt(TASTE_SEED))).text
-      .replace(/```json/g, '').replace(/```/g, '').trim();
-    const food = JSON.parse(foodRaw);
-    const rawP = (food.places || []).length;
-    places = notBefore(food.places)
-      .filter((p) => p.zone && p.sourceUrl && /^https:\/\//i.test(p.sourceUrl))
-      .map((p) => normalizePlace(p, nowMs)).slice(0, 14);
-    console.log(`Comer embudo: ${rawP} brutos → ${places.length} válidos.`);
-    places.forEach((pl, i) => { if (i >= 10) pl.reserve = true; });
-    if (places.length < 14) foodMissing.push(`Comer ${places.length}/14`);
+    const genFood = async (avoidSet) => {
+      const foodRaw = cleanJson((await geminiGenerate(buildFoodPrompt(TASTE_SEED, { places: [...avoidSet] }))).text);
+      const food = JSON.parse(foodRaw);
+      const raw = (food.places || []).length;
+      const ok = notBefore(food.places, avoidSet)
+        .filter((p) => p.zone && p.sourceUrl && /^https:\/\//i.test(p.sourceUrl))
+        .map((p) => normalizePlace(p, nowMs));
+      return { ok, raw };
+    };
+    let first = await genFood(avoid.places);
+    places = first.ok.slice(0, FOOD_TARGET);
+    if (places.length < FOOD_TARGET) {
+      try {
+        const second = await genFood(new Set([...avoid.places, ...titlesOf(places)]));
+        places = mergeCap(places, second.ok, FOOD_TARGET);
+        console.log(`Comer 2ª pasada: ${places.length}/${FOOD_TARGET}.`);
+      } catch (e2) { console.log('Comer 2ª pasada falló: ' + (e2.message || e2)); }
+    }
+    if (places.length < FOOD_MIN) {
+      const fill = backfillFromArchive(datedFeeds, 'places', new Set([...avoid.places, ...titlesOf(places)]), nowMs, FOOD_MIN - places.length)
+        .map((p) => normalizePlace({ ...p, reserve: undefined }, nowMs));
+      places = mergeCap(places, fill, Math.max(FOOD_MIN, places.length));
+      if (fill.length) console.log(`Comer relleno archivo: +${fill.length} sitios.`);
+    }
+    console.log(`Comer embudo: ${first.raw} brutos → ${places.length} válidos.`);
+    places.forEach((pl, i) => { pl.reserve = i >= 10; });
+    if (places.length < FOOD_TARGET) foodMissing.push(`Comer ${places.length}/${FOOD_TARGET}`);
   } catch (e) {
     foodMissing.push('Comer: fallo IA (' + String(e.message || e).slice(0, 120) + ')');
   }
@@ -560,5 +681,11 @@ async function fullRun() {
   console.log(`Feed: ${planes.length} planes + ${cartelera.length} pelis + ${series.length} series + ${movies.length} movies + ${places.length} places. Grupo ${GROUP}. Modelo ${MODEL_USED}.`);
 }
 
-if (CHECK_ONLY) await checkSources();
-else await fullRun();
+const isMainModule = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isMainModule) {
+  if (CHECK_ONLY) await checkSources();
+  else await fullRun();
+}
+
+// Exportados para tests (Vitest) sin ejecutar la cocina al importar.
+export { normCat, zoneOf, toIsoMadrid, isoWeekNumber, coerceTravel, normTitle, isExcluded, recentFeedTitles, backfillFromArchive, feedDayMs, NO_REPEAT_DAYS };

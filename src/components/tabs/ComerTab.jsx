@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FBadge, FGlyph, SyncGlyph } from "../illustrations/NotoBadges";
-import { db, getVisibleRecos, toggleRecoInterest, feedbackReco, restoreReco } from "../../db";
+import { db, getVisibleRecos, getSeenFavoriteRecos, getRepescaReco, toggleRecoInterest, feedbackReco, restoreReco, markRecoSeenFavorite } from "../../db";
 import { getTasteProfile } from "../../services/recoService";
 import { syncPlansFromCloud } from "../../services/feedService";
 import { PlanWhy, PlanSourceLink } from "../plans/shared";
+import SeenChoiceDialog from "../reco/SeenChoiceDialog";
 
 const FILTER_MODES = [
   { value: 'all', label: 'Todos' },
@@ -30,6 +31,8 @@ function scorePlace(p, profile) {
 
 export default function ComerTab() {
   const [places, setPlaces] = useState([]);
+  const [seenPlaces, setSeenPlaces] = useState([]);
+  const [seenFor, setSeenFor] = useState(null);
   const [filterMode, setFilterMode] = useState('all');
   const [discarded, setDiscarded] = useState([]);
   const [showDiscarded, setShowDiscarded] = useState(false);
@@ -40,11 +43,15 @@ export default function ComerTab() {
   const toastTimer = useRef(null);
 
   const load = async () => {
-    const [all, profile] = await Promise.all([
+    const [all, seen, profile, rep] = await Promise.all([
       getVisibleRecos('places'),
+      getSeenFavoriteRecos('places'),
       getTasteProfile(db),
+      getRepescaReco(),
     ]);
-    setPlaces([...all].sort((a, b) => scorePlace(b, profile) - scorePlace(a, profile)));
+    const withRep = rep && rep.recoTable === 'places' && !all.some((x) => x.id === rep.id) ? [...all, rep] : all;
+    setPlaces([...withRep].sort((a, b) => scorePlace(b, profile) - scorePlace(a, profile)));
+    setSeenPlaces(seen);
     setTuned(Boolean(profile.food?.learnedLikes?.length || profile.food?.learnedAvoid?.length));
     const trash = (await db.table('places').toArray())
       .filter((r) => r.userStatus === 'discarded' || r.status === 'discarded')
@@ -54,8 +61,12 @@ export default function ComerTab() {
 
   useEffect(() => {
     load();
-    return () => { if (toastTimer.current) clearTimeout(toastTimer.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const onVisible = () => { if (document.visibilityState === 'visible') load(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    };
   }, []);
 
   const showToast = (msg) => {
@@ -71,7 +82,9 @@ export default function ComerTab() {
     setIsSyncing(true);
     try {
       const result = await syncPlansFromCloud(db, {});
-      showToast(result.success ? `Actualizado${result.recoSummary ? ' · ' + result.recoSummary : ''}` : `No se pudo actualizar: ${result.error}`);
+      showToast(result.success
+        ? (result.skipped ? 'Ya estás al día' : `Actualizado${result.recoSummary ? ' · ' + result.recoSummary : ''}`)
+        : `No se pudo actualizar: ${result.error}`);
       await load();
     } finally {
       setIsSyncing(false);
@@ -84,13 +97,27 @@ export default function ComerTab() {
     await load();
     showToast(nowFav ? "Guardado en favoritos (afina tus gustos)" : "Desmarcado");
   };
-  const onFeedback = async (e, item, kind) => {
+  const onFeedback = async (e, item) => {
     e.stopPropagation();
-    const promoted = await feedbackReco('places', item.id);
+    const promoted = await feedbackReco('places', item.id, 'disliked');
     await load();
-    showToast(kind === 'seen'
-      ? (promoted ? `Ya fui — entra en su lugar: ${promoted.title}` : "Ya fui — afinará tus gustos")
-      : (promoted ? `Descartado — entra en su lugar: ${promoted.title}` : "Descartado — evitaré similares"));
+    showToast(promoted ? `Descartado — entra en su lugar: ${promoted.title}` : "Descartado — evitaré similares");
+  };
+  const onSeen = (e, item) => {
+    e.stopPropagation();
+    setSeenFor(item);
+  };
+  const onSeenKeep = async () => {
+    await markRecoSeenFavorite('places', seenFor.id);
+    setSeenFor(null);
+    await load();
+    showToast('Guardado en favoritos · dentro de un mes te preguntamos si repites');
+  };
+  const onSeenPapelera = async () => {
+    const promoted = await feedbackReco('places', seenFor.id, 'seen');
+    setSeenFor(null);
+    await load();
+    showToast(promoted ? `A la papelera — entra en su lugar: ${promoted.title}` : 'A la papelera: no volverá a proponérselo');
   };
   const onRestore = async (e, item) => {
     e.stopPropagation();
@@ -102,7 +129,7 @@ export default function ComerTab() {
   const list = showDiscarded
     ? discarded
     : filterMode === 'favorites'
-      ? places.filter(isFavPlace)
+      ? [...places, ...seenPlaces].filter(isFavPlace)
       : places;
 
   return (
@@ -190,7 +217,13 @@ export default function ComerTab() {
                           ★ {place.famousDish}
                         </span>
                       )}
-                      {isInterested && (
+                      {place.repesca && (
+                        <span className="text-[10px] font-black text-conn-deep bg-conn-amberSoft px-2 py-0.5 rounded-full">¿Repetimos?</span>
+                      )}
+                      {place.seenAt && !place.repesca && (
+                        <span className="text-[10px] font-black text-conn-muted bg-conn-aqua px-2 py-0.5 rounded-full">Visita guardada</span>
+                      )}
+                      {isInterested && !place.seenAt && (
                         <span className="text-[10px] font-black text-red-500 bg-red-50 px-2 py-0.5 rounded-full">
                           Favorito
                         </span>
@@ -213,7 +246,7 @@ export default function ComerTab() {
                     <FBadge name="corazon" color={isInterested ? "#E5484D" : "#CBD5E1"} size={40} />
                   </button>
                   <button
-                    onClick={(e) => onFeedback(e, place, 'seen')}
+                    onClick={(e) => onSeen(e, place)}
                     type="button"
                     aria-label={`Ya fui a ${place.title}`}
                     className="px-3 py-2 rounded-full text-xs font-black bg-conn-mist text-conn-tealDark min-h-[44px] transition-all active:scale-95"
@@ -221,7 +254,7 @@ export default function ComerTab() {
                     Ya fui ✓
                   </button>
                   <button
-                    onClick={(e) => onFeedback(e, place, 'disliked')}
+                    onClick={(e) => onFeedback(e, place)}
                     type="button"
                     aria-label={`No me gusta ${place.title}`}
                     className="px-3 py-2 rounded-full text-xs font-bold text-conn-muted bg-conn-aqua hover:text-red-500 hover:bg-red-50 min-h-[44px] transition-colors"
@@ -278,6 +311,16 @@ export default function ComerTab() {
           </div>
         )}
       </div>
+
+      {seenFor && (
+        <SeenChoiceDialog
+          title={seenFor.title}
+          verb="Ya has estado en este sitio"
+          onKeep={onSeenKeep}
+          onDiscard={onSeenPapelera}
+          onClose={() => setSeenFor(null)}
+        />
+      )}
     </div>
   );
 }

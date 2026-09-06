@@ -2,6 +2,8 @@
 // Lo usan la app (navegador) y la cocina (Node): nada de Dexie aquí,
 // la base llega como parámetro. Coste 0, 100% local el perfil.
 
+import { getTodayKeyMadrid } from '../utils/time.js';
+
 export const TASTE_SEED = {
   series: {
     genres: ['Drama', 'Comedia', 'Crimen', 'Ciencia ficción', 'Documental'],
@@ -104,6 +106,7 @@ export function normalizeSerie(p, now) {
     summary: p.summary || '',
     whyMatch: p.whyMatch || 'Elegida según tus gustos.',
     sourceUrl: cleanUrl(p.sourceUrl),
+    reserve: p.reserve === true,
     lastSeenAt: now,
     lastSyncedAt: now,
     feedStatus: 'active'
@@ -121,6 +124,7 @@ export function normalizeMovie(p, now) {
     summary: p.summary || '',
     whyMatch: p.whyMatch || 'Elegida según tus gustos.',
     sourceUrl: cleanUrl(p.sourceUrl),
+    reserve: p.reserve === true,
     lastSeenAt: now,
     lastSyncedAt: now,
     feedStatus: 'active'
@@ -139,6 +143,7 @@ export function normalizePlace(p, now) {
     summary: p.summary || '',
     whyMatch: p.whyMatch || 'Elegido según tus gustos.',
     sourceUrl: cleanUrl(p.sourceUrl),
+    reserve: p.reserve === true,
     lastSeenAt: now,
     lastSyncedAt: now,
     feedStatus: 'active'
@@ -146,7 +151,10 @@ export function normalizePlace(p, now) {
 }
 
 // ── Prompts de la cocina (con perfil de gustos) ──
-export function buildAudiovisualPrompt(profile) {
+// avoid = { series: [...], movies: [...], places: [...] }: títulos ya servidos
+// en la ventana de no-repetición; se nombran en el prompt para que el modelo
+// no los repita a ciegas (el filtro duro luego los corta igualmente).
+export function buildAudiovisualPrompt(profile, avoid = {}) {
   const s = profile.series, m = profile.movies;
   return [
     'Actúa como programador personal de series y cine para una persona en Sevilla.',
@@ -167,11 +175,13 @@ export function buildAudiovisualPrompt(profile) {
     `PELIS (gustos: ${m.genres.join(', ')}; cine español: ${m.spanish}; época: ${m.era}; terror: ${m.horror ? 'sí vale' : 'no'}; la ve en: ${m.company}; le marcó: ${m.refs.join(', ')}; plataformas: ${m.platforms.join(', ')}.`,
     m.learnedLikes?.length ? `Aprendido que le gusta: ${m.learnedLikes.join(', ')}.` : '',
     m.learnedAvoid?.length ? `Aprendido que evita: ${m.learnedAvoid.join(', ')}.` : '',
+    avoid.series?.length ? `YA SERVIDO hace menos de dos semanas (PROHIBIDO repetir estos títulos de series, ni siquiera variantes): ${avoid.series.join('; ')}.` : '',
+    avoid.movies?.length ? `YA SERVIDO hace menos de dos semanas (PROHIBIDO repetir estos títulos de películas, ni siquiera variantes): ${avoid.movies.join('; ')}.` : '',
     'Prohibido inventar plataformas: si no sabes dónde está, pon "Consultar". Solo títulos reales y conocidos.'
   ].filter(Boolean).join('\n');
 }
 
-export function buildFoodPrompt(profile) {
+export function buildFoodPrompt(profile, avoid = {}) {
   const f = profile.food;
   return [
     'Actúa como guía gastronómico local de Sevilla capital y área metropolitana.',
@@ -190,6 +200,7 @@ export function buildFoodPrompt(profile) {
     f.learnedLikes?.length ? `Aprendido que le gusta: ${f.learnedLikes.join(', ')}.` : '',
     f.learnedAvoid?.length ? `Aprendido que evita: ${f.learnedAvoid.join(', ')}.` : '',
     f.learnedZones?.length ? `Zonas que frecuenta: ${f.learnedZones.join(', ')}.` : '',
+    avoid.places?.length ? `YA SERVIDOS hace menos de dos semanas (PROHIBIDO repetir estos sitios, ni el mismo ni variantes: busca otros distintos): ${avoid.places.join('; ')}.` : '',
     'Solo sitios reales de Sevilla capital o área metropolitana (Dos Hermanas, Alcalá, Mairena, Bormujos, Camas, etc.). Si no conoces el plato famoso o el precio, pon "Consultar" antes que inventar.'
   ].filter(Boolean).join('\n');
 }
@@ -197,6 +208,12 @@ export function buildFoodPrompt(profile) {
 // ── Sincronización genérica: preserva favorito/papelera del usuario ──
 export async function syncRecosFromFeed(db, table, normalize, incomingRaw) {
   const now = Date.now();
+  const todayKey = getTodayKeyMadrid();
+  const keepToday = (prev) => {
+    // La selección de Hoy solo vale si se hizo hoy (renovación diaria).
+    const valid = prev.isForToday === true && prev.todaySelectionDate === todayKey;
+    return { isForToday: valid, todaySelectionDate: valid ? prev.todaySelectionDate : null };
+  };
   const incoming = (Array.isArray(incomingRaw) ? incomingRaw : [])
     .map((p) => normalize(p, now))
     .filter((p) => p.title);
@@ -209,7 +226,7 @@ export async function syncRecosFromFeed(db, table, normalize, incomingRaw) {
     const prev = existingMap.get(p.id);
     if (!prev) {
       added += 1;
-      return { ...p, status: 'available', userStatus: 'new', interestedAt: null, discardedAt: null };
+      return { ...p, status: 'available', userStatus: 'new', interestedAt: null, discardedAt: null, isForToday: false, todaySelectionDate: null };
     }
     return {
       ...p,
@@ -217,7 +234,9 @@ export async function syncRecosFromFeed(db, table, normalize, incomingRaw) {
       userStatus: prev.userStatus ?? 'new',
       interestedAt: prev.interestedAt ?? null,
       discardedAt: prev.discardedAt ?? null,
-      discardReason: prev.discardReason ?? null
+      discardReason: prev.discardReason ?? null,
+      seenAt: prev.seenAt ?? null,
+      ...keepToday(prev)
     };
   });
 
@@ -227,10 +246,10 @@ export async function syncRecosFromFeed(db, table, normalize, incomingRaw) {
     if (incomingIds.has(prev.id)) continue;
     const fav = prev.userStatus === 'interested' || prev.status === 'interested';
     if (fav) {
-      toPut.push({ ...prev, lastSyncedAt: now });
+      toPut.push({ ...prev, lastSyncedAt: now, ...keepToday(prev) });
     } else if (prev.feedStatus === 'active' || !prev.feedStatus) {
       stale += 1;
-      toPut.push({ ...prev, feedStatus: 'stale', lastSyncedAt: now });
+      toPut.push({ ...prev, feedStatus: 'stale', lastSyncedAt: now, isForToday: false, todaySelectionDate: null });
     }
   }
 

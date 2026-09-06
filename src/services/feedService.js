@@ -3,6 +3,7 @@
 // (planes con category/longDescription + cine.peliculas).
 
 import { normalizeCategory } from '../utils/planCategories';
+import { getTodayKeyMadrid } from '../utils/time';
 import { normalizeSerie, normalizeMovie, normalizePlace, syncRecosFromFeed } from './recoService';
 
 // Sugerencias locales de compras (100% local, sin red). Las usa ComprasTab.
@@ -191,6 +192,7 @@ function normalizePlan(p, now) {
     expiresAt: toExpiresAt(p, now),
     sourceName: p.sourceName || '',
     verifiedAt: p.verifiedAt || null,
+    origin: 'feed',
     lastSeenAt: now,
     lastSyncedAt: now,
     feedStatus: 'active'
@@ -215,6 +217,7 @@ function normalizeLegacyCine(data, now) {
     longDescription: JSON.stringify(cine.peliculas),
     sourceUrl: '',
     expiresAt: null,
+    origin: 'feed',
     lastSeenAt: now,
     lastSyncedAt: now,
     feedStatus: 'active'
@@ -265,6 +268,22 @@ export async function syncPlansFromCloud(db, { signal } = {}) {
 
       const rawText = await response.text();
       const feedHash = feedHashOf(rawText);
+
+      // Si el contenido es idéntico al última vez sincronizado, no reescribimos
+      // Dexie: misma red, coste cero de IndexedDB y mismos timestamps.
+      try {
+        const prevMeta = await db.table('feedMeta').get('plans');
+        if (prevMeta?.feedHash === feedHash) {
+          return {
+            success: true, skipped: true, added: 0, updated: 0, unchanged: prevMeta.count ?? 0,
+            stale: 0, expired: 0, feedHash, generatedAt: prevMeta.generatedAt || null,
+            validUntil: prevMeta.validUntil || null, recoSummary: ''
+          };
+        }
+      } catch {
+        // Sin tabla feedMeta (instalación vieja): seguimos con el sync completo.
+      }
+
       let data;
       try {
         data = JSON.parse(rawText);
@@ -281,6 +300,7 @@ export async function syncPlansFromCloud(db, { signal } = {}) {
       }
 
       const normalized = (planesRaw || []).map((p) => normalizePlan(p, now));
+      const todayKey = getTodayKeyMadrid();
       const cineItems = normalizeCarteleraItems(carteleraRaw || [], now);
       const legacy = normalizeLegacyCine(data, now);
       const incoming = [...normalized, ...cineItems, ...(legacy ? [legacy] : [])];
@@ -329,28 +349,38 @@ export async function syncPlansFromCloud(db, { signal } = {}) {
         } else {
           updated += 1;
         }
-        // Preserva decisiones del usuario.
+        // Preserva decisiones del usuario. La selección de Hoy solo vale si
+        // se hizo hoy: una sincronización a medianoche la limpia sola.
+        const todayStillValid = prev.isForToday === true && prev.todaySelectionDate === todayKey;
         return {
           ...p,
+          origin: 'feed',
           status: prev.status ?? 'available',
           userStatus: prev.userStatus ?? (prev.status === 'interested' ? 'interested' : prev.status === 'discarded' ? 'discarded' : 'new'),
-          isForToday: prev.isForToday ?? false,
-          todaySelectionDate: prev.todaySelectionDate ?? null,
+          isForToday: todayStillValid,
+          todaySelectionDate: todayStillValid ? prev.todaySelectionDate : null,
           interestedAt: prev.interestedAt ?? null,
           discardedAt: prev.discardedAt ?? null
         };
       });
 
       // Reconciliación: los que ya no vienen en el feed pasan a stale
-      // (se conservan como histórico, no se borran).
+      // (se conservan como histórico, no se borran). Se detecta por
+      // origin==='feed' (nuevo) o por prefijos legacy (instalaciones viejas).
+      const isFeedOrigin = (prev) =>
+        prev.origin === 'feed' ||
+        prev.id === 'plan-cine-sevilla' ||
+        String(prev.id).startsWith('remote-plan-') ||
+        String(prev.id).startsWith('cine-') ||
+        String(prev.id).startsWith('ev-');
       let stale = 0;
       for (const prev of existing) {
-        if (!incomingIds.has(prev.id) && prev.id !== 'plan-cine-sevilla' && !String(prev.id).startsWith('remote-plan-') && !String(prev.id).startsWith('cine-')) {
+        if (!incomingIds.has(prev.id) && !isFeedOrigin(prev)) {
           continue; // registros locales de otras fuentes: no tocar
         }
         if (!incomingIds.has(prev.id) && (prev.feedStatus === 'active' || !prev.feedStatus)) {
           stale += 1;
-          toPut.push({ ...prev, feedStatus: 'stale', lastSyncedAt: now });
+          toPut.push({ ...prev, origin: 'feed', feedStatus: 'stale', lastSyncedAt: now });
         }
       }
 

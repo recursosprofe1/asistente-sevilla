@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { FBadge, FGlyph, CategoryBadge, SyncGlyph } from "../illustrations/NotoBadges";
-import { db, discardPlan, restorePlan, getFeedMeta } from "../../db";
+import { db, getFeedMeta } from "../../db";
 import { syncPlansFromCloud } from "../../services/feedService";
 import {
   UNLIMITED_TRAVEL,
@@ -12,7 +12,9 @@ import {
   withNormalizedCategory,
   toggleInterest,
   addPlanToToday,
-  removePlanFromToday
+  removePlanFromToday,
+  discardPlan,
+  restorePlan
 } from "../../services/planRepository";
 import { sortCategories } from "../../utils/planCategories";
 import { CineMovies, PlanWhy, PlanSourceLink, FeedStatusLine } from "../plans/shared";
@@ -246,7 +248,6 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
   const [showDiscarded, setShowDiscarded] = useState(false);
   const [filterMode, setFilterMode] = useState('all');
   const [activeCategory, setActiveCategory] = useState('Todas');
-  const [activeCine, setActiveCine] = useState('Todos');
   const [toast, setToast] = useState("");
   const [expandedId, setExpandedId] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -256,7 +257,7 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
   const [staleCount, setStaleCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const toastTimer = useRef(null);
-  const todayKey = getTodayKeyMadrid();
+  const [todayKey, setTodayKey] = useState(getTodayKeyMadrid);
 
   const loadPlansFromDb = async (includeStale = showPrevious) => {
     try {
@@ -280,7 +281,15 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
 
   useEffect(() => {
     loadPlansFromDb();
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      // Cambio de día: la selección de Hoy caduca al cruzar medianoche.
+      setTodayKey(getTodayKeyMadrid());
+      loadPlansFromDb();
+    };
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
+      document.removeEventListener('visibilitychange', onVisible);
       if (toastTimer.current) clearTimeout(toastTimer.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -326,10 +335,14 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
     try {
       const result = await syncPlansFromCloud(db, { signal: controller.signal });
       if (result.success) {
-        const parts = [`${result.added} nuevos`, `${result.updated} actualizados`, `${result.unchanged} sin cambios`];
-        if (result.stale > 0) parts.push(`${result.stale} retirados del feed`);
-        if (result.expired > 0) parts.push(`${result.expired} caducados`);
-        showToast(parts.join(' · '));
+        if (result.skipped) {
+          showToast("Ya estás al día: el feed no ha cambiado desde la última sincronización");
+        } else {
+          const parts = [`${result.added} nuevos`, `${result.updated} actualizados`, `${result.unchanged} sin cambios`];
+          if (result.stale > 0) parts.push(`${result.stale} retirados del feed`);
+          if (result.expired > 0) parts.push(`${result.expired} caducados`);
+          showToast(parts.join(' · '));
+        }
       } else {
         showToast(`No se pudo actualizar: ${result.error}`);
       }
@@ -390,41 +403,47 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
 
   const toggleExpanded = (id) => setExpandedId(expandedId === id ? null : id);
 
-  // Filtros: modo + distancia + categoría
-  let base = showDiscarded ? discardedPlans : plans;
-  if (!showDiscarded) {
-    if (filterMode === 'favorites') base = base.filter((p) => p.userStatus === 'interested' || p.status === 'interested');
-    if (filterMode === 'today') base = base.filter((p) => p.isForToday === true && p.todaySelectionDate === todayKey);
-  }
-  const { known, unknown } = partitionUnknownDistance(base);
-  const traveled = showDiscarded ? base : filterPlansByTravel(known, travelMinutes);
-  const withUnknown = travelMinutes === UNLIMITED_TRAVEL && !showDiscarded ? [...traveled, ...unknown] : traveled;
-  const byCategory = activeCategory === 'Todas' ? withUnknown : withUnknown.filter((p) => withNormalizedCategory(p) === activeCategory);
+  // Filtros: modo + distancia + categoría. Todo derivado en un único useMemo
+  // para no renormalizar categorías (Map con includes) en cada render/toast.
+  const derived = useMemo(() => {
+    const catCache = new Map();
+    const catOf = (p) => {
+      if (!catCache.has(p.id)) catCache.set(p.id, withNormalizedCategory(p));
+      return catCache.get(p.id);
+    };
+    let base = showDiscarded ? discardedPlans : plans;
+    if (!showDiscarded) {
+      if (filterMode === 'favorites') base = base.filter((p) => p.userStatus === 'interested' || p.status === 'interested');
+      if (filterMode === 'today') base = base.filter((p) => p.isForToday === true && p.todaySelectionDate === todayKey);
+    }
+    const { known, unknown } = partitionUnknownDistance(base);
+    const traveled = showDiscarded ? base : filterPlansByTravel(known, travelMinutes);
+    const withUnknown = travelMinutes === UNLIMITED_TRAVEL && !showDiscarded ? [...traveled, ...unknown] : traveled;
+    const byCategory = activeCategory === 'Todas' ? withUnknown : withUnknown.filter((p) => catOf(p) === activeCategory);
 
-  const sourceList = byCategory.filter((p) => {
-    // El cine vive en su pestaña: fuera de lista, filtros y conteo.
-    if (String(p.id).startsWith('cine-') || p.id === 'plan-cine-sevilla') return false;
-    return (withNormalizedCategory(p) !== 'Cine');
-  });
-  const grouped = sourceList.reduce((acc, plan) => {
-    const cat = withNormalizedCategory(plan);
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(plan);
-    return acc;
-  }, {});
-  // Cartelera estructurada (una tarjeta por película+cine) en sección propia.
-  // La tarjeta agregada legacy (plan-cine-sevilla) sigue en el grupo Cine normal.
-  const cineStructuredAll = (grouped['Cine'] || []).filter((p) => String(p.id).startsWith('cine-'));
-  if (cineStructuredAll.length > 0) {
-    grouped['Cine'] = (grouped['Cine'] || []).filter((p) => !String(p.id).startsWith('cine-'));
-    if (grouped['Cine'].length === 0) delete grouped['Cine'];
-  }
-  const categories = sortCategories(Object.keys(grouped).filter((c) => (grouped[c] || []).length > 0));
-  const availableCategories = sortCategories([...new Set(base.map(withNormalizedCategory))].filter((c) => c !== 'Cine'));
-
-  const cineNames = [...new Set(cineStructuredAll.map((p) => p.venue || 'Cines de Sevilla'))].sort((a, b) => a.localeCompare(b, 'es'));
-  const cineVisible = activeCine === 'Todos' ? cineStructuredAll : cineStructuredAll.filter((p) => (p.venue || 'Cines de Sevilla') === activeCine);
-  const showCineSection = cineStructuredAll.length > 0 && (activeCategory === 'Todas' || activeCategory === 'Cine') && !showDiscarded;
+    const sourceList = byCategory.filter((p) => {
+      // El cine vive en su pestaña: fuera de lista, filtros y conteo.
+      if (String(p.id).startsWith('cine-') || p.id === 'plan-cine-sevilla') return false;
+      return catOf(p) !== 'Cine';
+    });
+    const grouped = sourceList.reduce((acc, plan) => {
+      const cat = catOf(plan);
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(plan);
+      return acc;
+    }, {});
+    // Cartelera estructurada (una tarjeta por película+cine) en sección propia.
+    // La tarjeta agregada legacy (plan-cine-sevilla) sigue en el grupo Cine normal.
+    const cineStructuredAll = (grouped['Cine'] || []).filter((p) => String(p.id).startsWith('cine-'));
+    if (cineStructuredAll.length > 0) {
+      grouped['Cine'] = (grouped['Cine'] || []).filter((p) => !String(p.id).startsWith('cine-'));
+      if (grouped['Cine'].length === 0) delete grouped['Cine'];
+    }
+    const categories = sortCategories(Object.keys(grouped).filter((c) => (grouped[c] || []).length > 0));
+    const availableCategories = sortCategories([...new Set(base.map(catOf))].filter((c) => c !== 'Cine'));
+    return { sourceList, grouped, categories, availableCategories, cineStructuredAll, unknown };
+  }, [plans, discardedPlans, showDiscarded, filterMode, travelMinutes, activeCategory, todayKey]);
+  const { sourceList, grouped, categories, availableCategories, unknown } = derived;
 
   const feedStale = feedMeta?.validUntil ? Date.parse(feedMeta.validUntil) < Date.now() : false;
 
@@ -536,7 +555,7 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
 
         {/* Filtro por categoría: rejilla sin scroll (opción A) */}
         {availableCategories.length > 1 && (
-          <div className="grid grid-cols-4 gap-x-1 gap-y-2.5 mt-3" role="group" aria-label="Filtrar por categoría">
+          <div className="grid grid-cols-3 gap-x-1 gap-y-2.5 mt-3" role="group" aria-label="Filtrar por categoría">
             <CategoryCircle
               label="Todas"
               category="Varios"

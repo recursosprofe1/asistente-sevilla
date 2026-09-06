@@ -34,3 +34,14 @@ export function getGreetingMadrid(date = new Date()) {
   if (hour < 20) return 'Buenas tardes';
   return 'Buenas noches';
 }
+
+// Número de semana ISO (misma fórmula que la cocina): sirve para que la
+// repesca rote de forma determinista y muestre UNA sola recomendación
+// consumida por semana.
+export function getIsoWeekNumber(date = new Date()) {
+  const t = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = (t.getUTCDay() + 6) % 7;
+  t.setUTCDate(t.getUTCDate() - day + 3);
+  const first = new Date(Date.UTC(t.getUTCFullYear(), 0, 4));
+  return 1 + Math.round(((t - first) / 86400000 - 3 + ((first.getUTCDay() + 6) % 7)) / 7);
+}

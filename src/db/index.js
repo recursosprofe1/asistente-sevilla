@@ -1,4 +1,6 @@
 import Dexie from 'dexie';
+import { getTodayKeyMadrid, getIsoWeekNumber } from '../utils/time';
+import { pickRepesca } from '../utils/repesca';
 
 export const db = new Dexie('AsistentePersonalDB');
 
@@ -75,10 +77,46 @@ export async function getVisibleRecos(table) {
   return all.filter((r) => {
     if (!r) return false;
     if (r.reserve === true) return false; // reservas ocultas hasta promocionar
+    if (r.seenAt) return false; // consumida y guardada: sale de la lista (vuelve por repesca)
     if (r.userStatus === 'discarded' || r.status === 'discarded') return false;
     if (r.feedStatus === 'expired' || r.feedStatus === 'removed') return false;
     return true;
   });
+}
+
+// Favoritas consumidas ("Vista/Ya fui → se queda"): fuera de la lista
+// principal, visibles solo bajo el filtro Favoritos y vía repesca.
+export async function getSeenFavoriteRecos(table) {
+  const all = await db.table(table).toArray();
+  return all.filter((r) =>
+    r && r.seenAt && r.userStatus === 'interested' &&
+    r.feedStatus !== 'expired' && r.feedStatus !== 'removed' &&
+    r.userStatus !== 'discarded' && r.status !== 'discarded'
+  );
+}
+
+// "Vista / Ya fui" con intención de quedarse: favorito consumido. No libera
+// reserva (sigue ocupando su hueco visual en Favoritos).
+export async function markRecoSeenFavorite(table, id) {
+  await db.table(table).update(id, {
+    userStatus: 'interested', status: 'interested',
+    seenAt: Date.now(), lastSeenAt: Date.now()
+  });
+}
+
+// La repesca de la semana (UNA sola en toda la app, rota por semana ISO):
+// pendiente de consumir y más antigua de 30 días.
+export async function getRepescaReco(now = new Date()) {
+  const nowMs = now.getTime();
+  const candidates = [];
+  for (const table of RECO_TABLES) {
+    try {
+      const seen = await getSeenFavoriteRecos(table);
+      for (const r of seen) candidates.push({ ...r, recoTable: table });
+    } catch { /* tabla aún sin migrar */ }
+  }
+  const picked = pickRepesca(candidates, getIsoWeekNumber(now), nowMs);
+  return picked ? { ...picked, repesca: true } : null;
 }
 
 export async function toggleRecoInterest(table, id) {
@@ -86,7 +124,12 @@ export async function toggleRecoInterest(table, id) {
   if (!rec) return false;
   const interested = rec.userStatus === 'interested' || (!rec.userStatus && rec.status === 'interested');
   if (interested) {
-    await db.table(table).update(id, { userStatus: 'new', status: 'available', interestedAt: null });
+    // Desmarcar favorito saca también de Hoy (misma regla cerrada que planes)
+    // y de "consumida": vuelve a la lista normal.
+    await db.table(table).update(id, {
+      userStatus: 'new', status: 'available', interestedAt: null, seenAt: null,
+      isForToday: false, todaySelectionDate: null
+    });
     return false;
   }
   await db.table(table).update(id, { userStatus: 'interested', status: 'interested', interestedAt: Date.now(), lastSeenAt: Date.now() });
@@ -95,7 +138,8 @@ export async function toggleRecoInterest(table, id) {
 
 export async function discardReco(table, id) {
   await db.table(table).update(id, {
-    userStatus: 'discarded', status: 'discarded', discardedAt: Date.now(), discardReason: 'disliked'
+    userStatus: 'discarded', status: 'discarded', discardedAt: Date.now(),
+    discardReason: 'disliked', isForToday: false, todaySelectionDate: null
   });
   return promoteReserve(table);
 }
@@ -105,7 +149,8 @@ export async function discardReco(table, id) {
 export async function feedbackReco(table, id, kind) {
   const reason = kind === 'seen' ? 'seen' : 'disliked';
   await db.table(table).update(id, {
-    userStatus: 'discarded', status: 'discarded', discardedAt: Date.now(), discardReason: reason
+    userStatus: 'discarded', status: 'discarded', discardedAt: Date.now(),
+    discardReason: reason, isForToday: false, todaySelectionDate: null
   });
   return promoteReserve(table);
 }
@@ -123,8 +168,60 @@ export async function promoteReserve(table) {
 
 export async function restoreReco(table, id) {
   await db.table(table).update(id, {
-    userStatus: 'new', status: 'available', discardedAt: null, feedStatus: 'active'
+    userStatus: 'new', status: 'available', discardedAt: null, feedStatus: 'active', seenAt: null
   });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HOY PARA RECOS (series / movies / places): espejo exacto de la regla de
+// planes — selección manual con renovación diaria; desmarcar favorito saca
+// de Hoy, quitar de Hoy conserva el favorito.
+// ─────────────────────────────────────────────────────────────────────────────
+export async function addRecoToToday(table, id) {
+  const rec = await db.table(table).get(id);
+  if (!rec) return false;
+  // Añadir a Hoy marca automáticamente como interesante para reducir pasos.
+  await db.table(table).update(id, {
+    isForToday: true,
+    todaySelectionDate: getTodayKeyMadrid(),
+    userStatus: 'interested',
+    status: 'interested',
+    interestedAt: rec.interestedAt || Date.now()
+  });
+  return true;
+}
+
+export async function removeRecoFromToday(table, id) {
+  // Quitar de Hoy conserva el favorito.
+  await db.table(table).update(id, { isForToday: false, todaySelectionDate: null });
+}
+
+export async function toggleRecoForToday(table, id) {
+  const rec = await db.table(table).get(id);
+  if (!rec) return false;
+  if (rec.isForToday === true && rec.todaySelectionDate === getTodayKeyMadrid()) {
+    await removeRecoFromToday(table, id);
+    return false;
+  }
+  await addRecoToToday(table, id);
+  return true;
+}
+
+// Recos seleccionados para hoy (de las tres tablas), sin reservas ni papelera.
+export async function getTodayRecos(todayKey = getTodayKeyMadrid()) {
+  const out = [];
+  for (const table of RECO_TABLES) {
+    const all = await db.table(table).toArray();
+    for (const r of all) {
+      if (!r || r.reserve === true) continue;
+      if (r.seenAt) continue; // consumida: ya no es selección pendiente
+      if (r.isForToday !== true || r.todaySelectionDate !== todayKey) continue;
+      if (r.userStatus === 'discarded' || r.status === 'discarded') continue;
+      if (r.feedStatus === 'expired' || r.feedStatus === 'removed') continue;
+      out.push({ ...r, recoTable: table });
+    }
+  }
+  return out.sort((a, b) => (b.interestedAt || 0) - (a.interestedAt || 0));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -357,6 +454,8 @@ export async function initializeDatabase() {
     // PAPELERA DE PLANES: purgar descartados con más de 7 días
     await purgeExpiredDiscards();
     await expireOldPlans();
+    // HOY: renovación diaria — limpiar selecciones de ayer.
+    await clearStaleTodayFlags();
 
     // PREFERENCIAS por defecto
     const themePref = await db.preferences.get('theme');
@@ -375,81 +474,28 @@ export async function initializeDatabase() {
 // ─────────────────────────────────────────────────────────────────────────────
 // CRUD HELPERS (sin dependencias externas)
 // ─────────────────────────────────────────────────────────────────────────────
+// PLANES: las mutaciones (favorito / Hoy / papelera) viven en
+// src/services/planRepository.js. Aquí solo limpieza y utilidades de bajo nivel.
 
-// PLANES — con invariantes: Hoy es selección manual con renovación diaria.
-function todayKeyMadrid() {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Madrid',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).format(new Date());
-}
-
-export async function setPlanStatus(id, newStatus) {
-  return await db.plans.update(id, { status: newStatus });
-}
-
-export async function markPlanInterested(id) {
-  const plan = await db.plans.get(id);
-  return await db.plans.update(id, {
-    status: 'interested',
-    userStatus: 'interested',
-    interestedAt: Date.now(),
-    lastSeenAt: Date.now(),
-    feedStatus: plan?.feedStatus ?? 'active'
-  });
-}
-
-export async function unmarkPlanInterested(id) {
-  // Desmarcar favorito saca también de Hoy (decisión cerrada).
-  return await db.plans.update(id, {
-    status: 'available',
-    userStatus: 'new',
-    interestedAt: null,
-    isForToday: false,
-    todaySelectionDate: null
-  });
-}
-
-export async function discardPlan(id) {
-  return await db.plans.update(id, {
-    status: 'discarded',
-    userStatus: 'discarded',
-    discardedAt: Date.now(),
-    isForToday: false,
-    todaySelectionDate: null
-  });
-}
-
-export async function restorePlan(id) {
-  // Restaurar vuelve a Planes, pero no a Hoy.
-  return await db.plans.update(id, {
-    status: 'available',
-    userStatus: 'new',
-    discardedAt: null,
-    isForToday: false,
-    todaySelectionDate: null,
-    feedStatus: 'active'
-  });
-}
-
-export async function togglePlanForToday(id) {
-  const plan = await db.plans.get(id);
-  if (!plan) return false;
-  if (plan.isForToday === true && plan.todaySelectionDate === todayKeyMadrid()) {
-    // Quitar de Hoy conserva el favorito.
-    await db.plans.update(id, { isForToday: false, todaySelectionDate: null });
-    return false;
+// Limpia selecciones de Hoy de días anteriores (renovación diaria): marca
+// isForToday=false cuando todaySelectionDate ya no es hoy. Devuelve cuántos.
+export async function clearStaleTodayFlags(now = new Date()) {
+  const todayKey = getTodayKeyMadrid(now);
+  let count = 0;
+  const tables = ['plans', ...RECO_TABLES];
+  for (const table of tables) {
+    try {
+      const rows = await db.table(table).toArray();
+      const stale = rows.filter((r) => r && r.isForToday === true && r.todaySelectionDate !== todayKey);
+      for (const r of stale) {
+        await db.table(table).update(r.id, { isForToday: false, todaySelectionDate: null });
+        count += 1;
+      }
+    } catch {
+      // Tabla indisponible (instalación sin migrar): nada que limpiar.
+    }
   }
-  await db.plans.update(id, {
-    isForToday: true,
-    todaySelectionDate: todayKeyMadrid(),
-    status: 'interested',
-    userStatus: 'interested',
-    interestedAt: plan.interestedAt || Date.now()
-  });
-  return true;
+  return count;
 }
 
 // Borra (marca como 'purged') los planes descartados hace más de 7 días.

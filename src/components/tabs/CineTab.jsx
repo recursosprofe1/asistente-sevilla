@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FBadge, FGlyph, CategoryBadge, SyncGlyph } from "../illustrations/NotoBadges";
-import { db, getVisibleRecos, toggleRecoInterest, feedbackReco, restoreReco } from "../../db";
+import { db, getVisibleRecos, getSeenFavoriteRecos, getRepescaReco, toggleRecoInterest, feedbackReco, restoreReco, toggleRecoForToday, markRecoSeenFavorite } from "../../db";
 import { getTasteProfile } from "../../services/recoService";
 import { syncPlansFromCloud } from "../../services/feedService";
 import { PlanCard, shortCineName } from "./PlanesTab";
+import SeenChoiceDialog from "../reco/SeenChoiceDialog";
 import {
-  toggleInterest, addPlanToToday, removePlanFromToday, discardPlanRepo, restorePlanRepo
+  toggleInterest, addPlanToToday, removePlanFromToday, discardPlan, restorePlan
 } from "../../services/planRepository";
-import { discardPlan, restorePlan } from "../../db";
 import { PlanWhy, PlanSourceLink } from "../plans/shared";
 import { getTodayKeyMadrid } from "../../utils/time";
 
@@ -20,6 +20,7 @@ const SUBS = [
 const FILTER_MODES = [
   { value: 'all', label: 'Todos' },
   { value: 'favorites', label: 'Favoritos' },
+  { value: 'today', label: 'En Hoy' },
 ];
 
 // Cines de una tarjeta de cartelera como pastillas cortas.
@@ -46,8 +47,9 @@ function scoreByProfile(item, profile, kind) {
   return score;
 }
 
-function RecoCard({ item, kindLabel, meta, onFav, onFeedback, onRestore, isExpanded, onToggle, discarded }) {
+function RecoCard({ item, kindLabel, meta, onFav, onToggleToday, onSeen, onFeedback, onRestore, isExpanded, onToggle, discarded, todayKey }) {
   const isInterested = item.userStatus === "interested" || item.status === "interested";
+  const isForToday = item.isForToday === true && item.todaySelectionDate === todayKey;
   return (
     <article className="conn-card overflow-hidden transition-all">
       <button
@@ -80,7 +82,13 @@ function RecoCard({ item, kindLabel, meta, onFav, onFeedback, onRestore, isExpan
             )}
           </div>
           <div className="flex flex-col items-end gap-2 flex-shrink-0">
-            {isInterested && (
+            {item.repesca && (
+              <span className="text-[10px] font-black text-conn-deep bg-conn-amberSoft px-2 py-0.5 rounded-full">¿Repetimos?</span>
+            )}
+            {item.seenAt && !item.repesca && (
+              <span className="text-[10px] font-black text-conn-muted bg-conn-aqua px-2 py-0.5 rounded-full">Vista</span>
+            )}
+            {isInterested && !item.seenAt && (
               <span className="text-[10px] font-black text-red-500 bg-red-50 px-2 py-0.5 rounded-full">Favorito</span>
             )}
             <FGlyph name="chevronDown" size={14} color="#5E8B91" />
@@ -100,7 +108,19 @@ function RecoCard({ item, kindLabel, meta, onFav, onFeedback, onRestore, isExpan
               <FBadge name="corazon" color={isInterested ? "#E5484D" : "#CBD5E1"} size={40} />
             </button>
             <button
-              onClick={(e) => onFeedback(e, item, 'seen')}
+              onClick={(e) => onToggleToday(e, item)}
+              type="button"
+              aria-pressed={isForToday}
+              aria-label={isForToday ? `Quitar ${item.title} de Hoy` : `Añadir ${item.title} a Hoy`}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black transition-all active:scale-95 min-h-[44px] ${
+                isForToday ? 'bg-conn-amberSoft text-conn-deep' : 'bg-conn-mist text-conn-tealDark'
+              }`}
+            >
+              <FBadge name="calendario-add" color="#F5A623" size={22} />
+              {isForToday ? 'En Hoy' : 'Añadir a Hoy'}
+            </button>
+            <button
+              onClick={(e) => onSeen(e, item)}
               type="button"
               aria-label={`Marcar ${item.title} como vista`}
               className="px-3 py-2 rounded-full text-xs font-black bg-conn-mist text-conn-tealDark min-h-[44px] transition-all active:scale-95"
@@ -144,6 +164,8 @@ export default function CineTab() {
   const [cine, setCine] = useState([]);
   const [series, setSeries] = useState([]);
   const [movies, setMovies] = useState([]);
+  const [seenRecos, setSeenRecos] = useState({ series: [], movies: [] });
+  const [seenFor, setSeenFor] = useState(null);
   const [discarded, setDiscarded] = useState([]);
   const [showDiscarded, setShowDiscarded] = useState(false);
   const [toast, setToast] = useState("");
@@ -151,24 +173,36 @@ export default function CineTab() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [tuned, setTuned] = useState(false);
   const toastTimer = useRef(null);
-  const todayKey = getTodayKeyMadrid();
+  const [todayKey, setTodayKey] = useState(getTodayKeyMadrid);
 
   const load = async () => {
-    const [cinePlans, s, m, profile] = await Promise.all([
-      db.plans.toArray().then((all) => all.filter((p) => {
-        if (p.userStatus === 'discarded' || p.status === 'discarded' || p.status === 'purged') return false;
-        if (p.feedStatus === 'expired' || p.feedStatus === 'removed') return false;
-        const cats = p.categories || (p.category ? [p.category] : []);
-        return cats.includes('Cine') || String(p.id).startsWith('cine-') || p.id === 'plan-cine-sevilla';
-      })),
+    const [allPlans, s, m, seenS, seenM, profile, rep] = await Promise.all([
+      db.plans.toArray(),
       getVisibleRecos('series'),
       getVisibleRecos('movies'),
+      getSeenFavoriteRecos('series'),
+      getSeenFavoriteRecos('movies'),
       getTasteProfile(db),
+      getRepescaReco(),
     ]);
+    // La repesca (solo una en toda la app) se suma a su lista si procede.
+    const withRep = (arr, kind) =>
+      rep && rep.recoTable === kind && !arr.some((x) => x.id === rep.id) ? [...arr, rep] : arr;
+    const isCinePlan = (p) => {
+      const cats = p.categories || (p.category ? [p.category] : []);
+      return cats.includes('Cine') || String(p.id).startsWith('cine-') || p.id === 'plan-cine-sevilla';
+    };
+    const cinePlans = allPlans.filter((p) => {
+      if (!isCinePlan(p)) return false;
+      if (p.userStatus === 'discarded' || p.status === 'discarded' || p.status === 'purged') return false;
+      if (p.feedStatus === 'expired' || p.feedStatus === 'removed') return false;
+      return true;
+    });
     const rank = (arr, kind) => [...arr].sort((a, b) => scoreByProfile(b, profile, kind) - scoreByProfile(a, profile, kind));
     setCine(cinePlans.sort((a, b) => (b.lastSeenAt || 0) - (a.lastSeenAt || 0)));
-    setSeries(rank(s, 'series'));
-    setMovies(rank(m, 'movies'));
+    setSeries(rank(withRep(s, 'series'), 'series'));
+    setMovies(rank(withRep(m, 'movies'), 'movies'));
+    setSeenRecos({ series: seenS, movies: seenM });
     setTuned(Boolean(
       (profile.series.learnedLikes?.length || profile.series.learnedAvoid?.length) ||
       (profile.movies.learnedLikes?.length || profile.movies.learnedAvoid?.length)
@@ -178,18 +212,23 @@ export default function CineTab() {
       const arr = await db.table(t).toArray();
       trash.push(...arr.filter((r) => r.userStatus === 'discarded' || r.status === 'discarded'));
     }
-    const cineTrash = (await db.plans.toArray()).filter((p) => {
-      const cats = p.categories || (p.category ? [p.category] : []);
-      const isCine = cats.includes('Cine') || String(p.id).startsWith('cine-') || p.id === 'plan-cine-sevilla';
-      return isCine && (p.userStatus === 'discarded' || p.status === 'discarded');
-    });
+    const cineTrash = allPlans.filter((p) => isCinePlan(p) && (p.userStatus === 'discarded' || p.status === 'discarded'));
     setDiscarded([...trash, ...cineTrash].sort((a, b) => (b.discardedAt || 0) - (a.discardedAt || 0)));
   };
 
   useEffect(() => {
     load();
-    return () => { if (toastTimer.current) clearTimeout(toastTimer.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      // Cambio de día: caduca la selección de Hoy al cruzar medianoche.
+      setTodayKey(getTodayKeyMadrid());
+      load();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    };
   }, []);
 
   const showToast = (msg) => {
@@ -205,7 +244,9 @@ export default function CineTab() {
     setIsSyncing(true);
     try {
       const result = await syncPlansFromCloud(db, {});
-      showToast(result.success ? `Actualizado${result.recoSummary ? ' · ' + result.recoSummary : ''}` : `No se pudo actualizar: ${result.error}`);
+      showToast(result.success
+        ? (result.skipped ? 'Ya estás al día' : `Actualizado${result.recoSummary ? ' · ' + result.recoSummary : ''}`)
+        : `No se pudo actualizar: ${result.error}`);
       await load();
     } finally {
       setIsSyncing(false);
@@ -235,13 +276,35 @@ export default function CineTab() {
     await load();
     showToast(nowFav ? "Guardado en favoritos (afina tus gustos)" : "Desmarcado");
   };
-  const onFeedbackReco = (table, kind) => async (e, item) => {
+  const onFeedbackReco = (table) => async (e, item) => {
     e.stopPropagation();
-    const promoted = await feedbackReco(table, item.id);
+    const promoted = await feedbackReco(table, item.id, 'disliked');
     await load();
-    showToast(kind === 'seen'
-      ? (promoted ? `Vista — entra en su lugar: ${promoted.title}` : "Vista — afinará tus gustos")
-      : (promoted ? `Descartada — entra en su lugar: ${promoted.title}` : "Descartada — evitaré similares"));
+    showToast(promoted ? `Descartada — entra en su lugar: ${promoted.title}` : "Descartada — evitaré similares");
+  };
+  const onSeenReco = (table) => (e, item) => {
+    e.stopPropagation();
+    setSeenFor({ table, item });
+  };
+  const onSeenKeep = async () => {
+    const { table, item } = seenFor;
+    await markRecoSeenFavorite(table, item.id);
+    setSeenFor(null);
+    await load();
+    showToast('Guardada en favoritos · dentro de un mes te preguntamos si repites');
+  };
+  const onSeenPapelera = async () => {
+    const { table, item } = seenFor;
+    const promoted = await feedbackReco(table, item.id, 'seen');
+    setSeenFor(null);
+    await load();
+    showToast(promoted ? `A la papelera — entra en su lugar: ${promoted.title}` : 'A la papelera: no volverá a proponérsela');
+  };
+  const onToggleTodayReco = (table) => async (e, item) => {
+    e.stopPropagation();
+    const on = await toggleRecoForToday(table, item.id);
+    await load();
+    showToast(on ? "Añadido a Hoy" : "Quitado de Hoy, sigue en favoritos");
   };
   const onRestoreReco = (table) => async (e, item) => {
     e.stopPropagation();
@@ -249,18 +312,19 @@ export default function CineTab() {
     await load();
     showToast("Restaurado");
   };
-  const onDiscardCineTrash = async (e, id) => { e.stopPropagation(); await discardPlanRepo(id); await load(); showToast("Descartado"); };
-  const onRestoreCineTrash = async (e, id) => { e.stopPropagation(); await restorePlanRepo(id); await load(); showToast("Restaurado"); };
 
   const counts = { cartelera: cine.length, series: series.length, movies: movies.length };
   const unfiltered = sub === 'cartelera' ? cine : sub === 'series' ? series : movies;
+  const table = sub === 'series' ? 'series' : sub === 'movies' ? 'movies' : null;
   let list = unfiltered;
-  if (!showDiscarded && filterMode === 'favorites') list = list.filter(isFavItem);
-  // "En Hoy" solo existe en cartelera (series/pelis/comer no tienen Hoy).
-  if (!showDiscarded && filterMode === 'today' && sub === 'cartelera') {
+  // Favoritos incluye también las consumidas ("Vista/Ya fui → se queda").
+  if (!showDiscarded && filterMode === 'favorites') {
+    list = [...list, ...((table && seenRecos[table]) || [])].filter(isFavItem);
+  }
+  // "En Hoy" funciona igual en cartelera, series y películas (misma regla diaria).
+  if (!showDiscarded && filterMode === 'today') {
     list = list.filter((p) => p.isForToday === true && p.todaySelectionDate === todayKey);
   }
-  const table = sub === 'series' ? 'series' : sub === 'movies' ? 'movies' : null;
 
   const serieMeta = (s) => [
     s.year || null,
@@ -323,18 +387,6 @@ export default function CineTab() {
               {m.label}
             </button>
           ))}
-          {sub === 'cartelera' && (
-            <button
-              type="button"
-              onClick={() => { setFilterMode('today'); setShowDiscarded(false); }}
-              aria-pressed={filterMode === 'today' && !showDiscarded}
-              className={`px-3 py-1 rounded-full text-[11px] font-black min-h-[32px] transition-all ${
-                filterMode === 'today' && !showDiscarded ? 'bg-conn-amberSoft text-conn-deep' : 'bg-white/20 text-white'
-              }`}
-            >
-              En Hoy
-            </button>
-          )}
         </div>
       </div>
 
@@ -363,15 +415,16 @@ export default function CineTab() {
               key={item.id} plan={item} showDiscarded
               isExpanded={expandedId === item.id} onToggle={toggleExpanded}
               onToggleInterest={onToggleInterest} onToggleForToday={onToggleForToday}
-              onDiscard={onDiscardCineTrash} onRestore={onRestoreCineTrash} todayKey={todayKey}
+              onDiscard={onDiscardPlan} onRestore={onRestorePlan} todayKey={todayKey}
               venueChips={cineChipsOf(item)}
             />
           ) : (
             <RecoCard
               key={item.id} item={item} kindLabel={sub === 'series' ? 'Serie' : 'Peli'}
               meta={sub === 'series' ? serieMeta(item) : movieMeta(item)}
-              onFav={onFavReco(table)} onFeedback={onFeedbackReco(table)} onRestore={onRestoreReco(table)}
+              onFav={onFavReco(table)} onToggleToday={onToggleTodayReco(table)} onSeen={onSeenReco(table)} onFeedback={onFeedbackReco(table)} onRestore={onRestoreReco(table)}
               isExpanded={expandedId === item.id} onToggle={toggleExpanded} discarded
+              todayKey={todayKey}
             />
           )
         ))}
@@ -390,8 +443,9 @@ export default function CineTab() {
           <RecoCard
             key={item.id} item={item} kindLabel={sub === 'series' ? 'Serie' : 'Peli'}
             meta={sub === 'series' ? serieMeta(item) : movieMeta(item)}
-            onFav={onFavReco(table)} onFeedback={onFeedbackReco(table)} onRestore={onRestoreReco(table)}
+            onFav={onFavReco(table)} onToggleToday={onToggleTodayReco(table)} onSeen={onSeenReco(table)} onFeedback={onFeedbackReco(table)} onRestore={onRestoreReco(table)}
             isExpanded={expandedId === item.id} onToggle={toggleExpanded} discarded={false}
+            todayKey={todayKey}
           />
         ))}
 
@@ -413,6 +467,16 @@ export default function CineTab() {
           </div>
         )}
       </div>
+
+      {seenFor && (
+        <SeenChoiceDialog
+          title={seenFor.item.title}
+          verb="Has visto esta recomendación"
+          onKeep={onSeenKeep}
+          onDiscard={onSeenPapelera}
+          onClose={() => setSeenFor(null)}
+        />
+      )}
     </div>
   );
 }

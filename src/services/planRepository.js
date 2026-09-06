@@ -141,7 +141,7 @@ export async function togglePlanForToday(id) {
   return true;
 }
 
-export async function discardPlanRepo(id) {
+export async function discardPlan(id) {
   await db.plans.update(id, {
     userStatus: 'discarded',
     status: 'discarded',
@@ -151,7 +151,7 @@ export async function discardPlanRepo(id) {
   });
 }
 
-export async function restorePlanRepo(id) {
+export async function restorePlan(id) {
   // Restaurar vuelve a Planes, pero no a Hoy (decisión cerrada).
   await db.plans.update(id, {
     userStatus: 'new',
