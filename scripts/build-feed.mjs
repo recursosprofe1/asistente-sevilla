@@ -417,7 +417,12 @@ async function checkSources() {
     ].join('\n');
     appendFileSync(process.env.GITHUB_STEP_SUMMARY, md);
   }
-  if (bad.length) { console.log('A sustituir: ' + bad.map((r) => r.name).join(', ')); process.exitCode = 2; }
+  if (bad.length) {
+    console.log('A sustituir: ' + bad.map((r) => r.name).join(', '));
+    // Anotaciones visibles en la página del run sin necesidad de abrir logs.
+    for (const r of bad) console.log(`::error::[${r.zona}] ${r.name} — ${r.error || 'sin detalle'}`);
+    process.exitCode = 2;
+  }
 }
 
 // Llama a Gemini con cadena de repuesto. La clave viaja por cabecera

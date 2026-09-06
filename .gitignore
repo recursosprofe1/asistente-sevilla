@@ -21,3 +21,6 @@ Thumbs.db
 
 # Estado local del IDE (no del proyecto)
 .opencode/
+
+# Notas de sesión con el agente (no son contenido del proyecto)
+handoff.txt
