@@ -230,17 +230,43 @@ function toIsoMadrid(d) {
   return `${g('year')}-${g('month')}-${g('day')}T${hour}:${g('minute')}:${g('second')}${offset}`;
 }
 
-async function fetchText(url, timeoutMs = 20000) {
+// WAFs de algunos ayuntamientos castigan intermitentemente la IP del runner:
+// reintentos con backoff, segundo UA tipo navegador real y, si la ruta con
+// barra final da 404, se prueba su canónica .../index.html (OpenCMS).
+const UA_MAIN = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AsistenteSevilla/1.0';
+const UA_BROWSER = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function fetchOnce(url, ua, timeoutMs) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const resp = await fetch(url, {
       signal: ctrl.signal, redirect: 'follow',
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AsistenteSevilla/1.0' },
+      headers: { 'User-Agent': ua, 'Accept-Language': 'es-ES,es;q=0.9' },
     });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    if (!resp.ok) { const err = new Error('HTTP ' + resp.status); err.httpStatus = resp.status; throw err; }
     return await resp.text();
   } finally { clearTimeout(t); }
+}
+
+async function fetchText(url, timeoutMs = 20000) {
+  const tries = [
+    () => fetchOnce(url, UA_MAIN, timeoutMs),
+    async () => { await sleep(2000); return fetchOnce(url, UA_BROWSER, timeoutMs); },
+    async () => { await sleep(4000); return fetchOnce(url, UA_BROWSER, timeoutMs); },
+    async () => { await sleep(4000); return fetchOnce(url.replace(/\/$/, '') + '/index.html', UA_BROWSER, timeoutMs); }
+  ];
+  let lastErr = null;
+  for (const [i, attempt] of tries.entries()) {
+    try { return await attempt(); }
+    catch (e) {
+      lastErr = e;
+      // El fallback index.html solo tiene sentido si hubo 404 o rechazo previo.
+      if (i === 2 && !(e.httpStatus === 404 || e.httpStatus === 403)) break;
+    }
+  }
+  throw lastErr;
 }
 function stripTags(html) {
   return String(html || '').replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ');
