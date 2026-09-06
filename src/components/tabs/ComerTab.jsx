@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FBadge, FGlyph } from "../illustrations/NotoBadges";
-import { TabHero, ControlsCard, PillGroup } from "../ui/TabChrome";
+import { TabHero, ControlsCard, IconToggle } from "../ui/TabChrome";
 import { db, getVisibleRecos, getSeenFavoriteRecos, getRepescaReco, toggleRecoInterest, feedbackReco, restoreReco, markRecoSeenFavorite } from "../../db";
 import { getTasteProfile } from "../../services/recoService";
 import { syncPlansFromCloud } from "../../services/feedService";
@@ -8,8 +8,8 @@ import { PlanWhy, PlanSourceLink } from "../plans/shared";
 import SeenChoiceDialog from "../reco/SeenChoiceDialog";
 
 const FILTER_MODES = [
-  { value: 'all', label: 'Todos' },
-  { value: 'favorites', label: 'Favoritos' },
+  { value: 'all', label: 'Todos', icon: 'lupa' },
+  { value: 'favorites', label: 'Favoritos', icon: 'corazon' },
 ];
 
 const isFavPlace = (p) => p.userStatus === "interested" || p.status === "interested";
@@ -148,12 +148,17 @@ export default function ComerTab() {
 
       {/* Botonera fuera del hero: mismo patrón que Planes y Cine */}
       <ControlsCard>
-        <PillGroup
-          label="Filtrar por interés"
-          options={FILTER_MODES}
-          value={showDiscarded ? '' : filterMode}
-          onChange={(v) => { setFilterMode(v); setShowDiscarded(false); }}
-        />
+        <div className="flex items-center justify-end gap-1.5" role="group" aria-label="Filtrar por interés">
+          {FILTER_MODES.map((m) => (
+            <IconToggle
+              key={m.value}
+              icon={m.icon}
+              label={m.label}
+              active={!showDiscarded && filterMode === m.value}
+              onClick={() => { setFilterMode(m.value); setShowDiscarded(false); }}
+            />
+          ))}
+        </div>
         {discarded.length > 0 && (
           <button onClick={() => setShowDiscarded(!showDiscarded)} type="button"
             className="w-full text-center text-xs font-bold text-conn-muted min-h-[36px]">

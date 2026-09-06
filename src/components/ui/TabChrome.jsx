@@ -6,9 +6,9 @@ import { FGlyph, SyncGlyph } from '../illustrations/NotoBadges';
 // Reglas de diseño pactadas:
 //  · Hero teal SOLO con título, línea de estado y botón de sync
 //    (mismo tamaño/posición en todas). Acciones extra van en `right`.
-//  · Toda botonera (subs, filtros, radios) va en una tarjeta blanca
-//    DEBAJO del hero, con el mismo estilo de pastilla:
-//    activo = deep sobre blanco, inactivo = aqua.
+//  · Toda botonera va DEBAJO del hero, en tarjeta blanca: secciones como
+//    pastillas con glifo+texto (SectionPill) y filtros como toggles
+//    circulares de puro icono (IconToggle), mismo lenguaje en las tres.
 // ═══════════════════════════════════════════════════════════════
 
 export function TabHero({ title, status, onSync, isSyncing, right, children }) {
@@ -50,23 +50,40 @@ export function ControlsCard({ children }) {
   return <div className="conn-card p-4 space-y-2.5">{children}</div>;
 }
 
-export function PillGroup({ label, options, value, onChange }) {
+// Pastilla de sección: glifo + texto (activo = teal relleno).
+export function SectionPill({ icon, label, active, onClick }) {
   return (
-    <div className="flex items-center gap-1.5 flex-wrap" role="group" aria-label={label}>
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          onClick={() => onChange(o.value)}
-          aria-pressed={value === o.value}
-          className={`px-3 py-1.5 rounded-full text-xs font-black min-h-[36px] transition-all active:scale-95 ${
-            value === o.value ? 'bg-conn-deep text-white' : 'bg-conn-aqua text-conn-muted'
-          }`}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full min-h-[36px] text-xs font-black transition-all active:scale-95 ${
+        active ? 'bg-conn-teal text-white' : 'bg-conn-aqua text-conn-muted'
+      }`}
+      style={active ? { boxShadow: '0 8px 16px -8px rgba(18, 165, 181, 0.7)' } : undefined}
+    >
+      <FGlyph name={icon} size={18} />
+      {label}
+    </button>
+  );
+}
+
+// Toggle circular de puro icono (lupa/corazón): anillo cuando está activo.
+export function IconToggle({ icon, label, active, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      title={label}
+      aria-label={label}
+      className={`w-10 h-10 rounded-full flex items-center justify-center bg-conn-aqua transition-all active:scale-90 ${
+        active ? 'opacity-100' : 'opacity-45'
+      }`}
+      style={active ? { outline: '2px solid #0B3B42', outlineOffset: 2 } : undefined}
+    >
+      <FGlyph name={icon} size={20} />
+    </button>
   );
 }
 

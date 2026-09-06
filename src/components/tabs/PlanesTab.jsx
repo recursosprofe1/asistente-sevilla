@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { FBadge, FGlyph, CategoryBadge } from "../illustrations/NotoBadges";
-import { TabHero, PillGroup, RoundIconButton } from "../ui/TabChrome";
+import { TabHero, IconToggle, RoundIconButton } from "../ui/TabChrome";
 import { db, getFeedMeta } from "../../db";
 import { syncPlansFromCloud } from "../../services/feedService";
 import {
@@ -29,9 +29,8 @@ export const TRAVEL_OPTIONS = [
 ];
 
 const FILTER_MODES = [
-  { value: 'all', label: 'Todos' },
-  { value: 'favorites', label: 'Favoritos' },
-  { value: 'today', label: 'En Hoy' }
+  { value: 'all', label: 'Todos', icon: 'lupa' },
+  { value: 'favorites', label: 'Favoritos', icon: 'corazon' }
 ];
 
 function diasRestantesEnPapelera(plan) {
@@ -413,9 +412,8 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
       return catCache.get(p.id);
     };
     let base = showDiscarded ? discardedPlans : plans;
-    if (!showDiscarded) {
-      if (filterMode === 'favorites') base = base.filter((p) => p.userStatus === 'interested' || p.status === 'interested');
-      if (filterMode === 'today') base = base.filter((p) => p.isForToday === true && p.todaySelectionDate === todayKey);
+    if (!showDiscarded && filterMode === 'favorites') {
+      base = base.filter((p) => p.userStatus === 'interested' || p.status === 'interested');
     }
     const { known, unknown } = partitionUnknownDistance(base);
     const traveled = showDiscarded ? base : filterPlansByTravel(known, travelMinutes);
@@ -443,7 +441,7 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
     const categories = sortCategories(Object.keys(grouped).filter((c) => (grouped[c] || []).length > 0));
     const availableCategories = sortCategories([...new Set(base.map(catOf))].filter((c) => c !== 'Cine'));
     return { sourceList, grouped, categories, availableCategories, cineStructuredAll, unknown };
-  }, [plans, discardedPlans, showDiscarded, filterMode, travelMinutes, activeCategory, todayKey]);
+  }, [plans, discardedPlans, showDiscarded, filterMode, travelMinutes, activeCategory]);
   const { sourceList, grouped, categories, availableCategories, unknown } = derived;
 
   const feedStale = feedMeta?.validUntil ? Date.parse(feedMeta.validUntil) < Date.now() : false;
@@ -490,9 +488,22 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
 
       {/* Control de tiempo + filtros */}
       <div className="conn-card p-4">
-        <p className="text-xs font-bold text-conn-muted leading-relaxed mb-2.5">
-          ¿Hasta dónde viajas hoy?
-        </p>
+        <div className="flex items-center justify-between gap-2 mb-2.5">
+          <p className="text-xs font-bold text-conn-muted leading-relaxed">
+            ¿Hasta dónde viajas hoy?
+          </p>
+          <div className="flex items-center gap-1.5" role="group" aria-label="Filtrar planes">
+            {FILTER_MODES.map((m) => (
+              <IconToggle
+                key={m.value}
+                icon={m.icon}
+                label={m.label}
+                active={!showDiscarded && filterMode === m.value}
+                onClick={() => { setFilterMode(m.value); setShowDiscarded(false); }}
+              />
+            ))}
+          </div>
+        </div>
 
         <div className="grid grid-cols-4 gap-1.5" role="group" aria-label="Tiempo máximo de desplazamiento">
           {TRAVEL_OPTIONS.map((opt) => {
@@ -508,23 +519,16 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
                 }`}
                 style={isSelected ? { boxShadow: '0 8px 16px -8px rgba(18, 165, 181, 0.7)' } : undefined}
               >
-                <span className="text-xs font-black leading-none">{opt.label}</span>
+                <span className="flex items-center gap-1 text-xs font-black leading-none">
+                  <FGlyph name={opt.value === UNLIMITED_TRAVEL ? 'brujula' : 'pin'} size={14} />
+                  {opt.label}
+                </span>
                 <span className={`text-[8px] mt-0.5 leading-none font-bold ${isSelected ? "text-white/85" : "text-conn-muted/70"}`}>
                   {opt.sub}
                 </span>
               </button>
             );
           })}
-        </div>
-
-        {/* Filtros de vista: estilo común a las tres pestañas */}
-        <div className="mt-2.5">
-          <PillGroup
-            label="Filtrar planes"
-            options={FILTER_MODES}
-            value={showDiscarded ? '' : filterMode}
-            onChange={(v) => { setFilterMode(v); setShowDiscarded(false); }}
-          />
         </div>
 
         {/* Filtro por categoría: rejilla sin scroll (opción A) */}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FBadge, FGlyph, CategoryBadge } from "../illustrations/NotoBadges";
-import { TabHero, ControlsCard, PillGroup } from "../ui/TabChrome";
+import { TabHero, ControlsCard, SectionPill, IconToggle } from "../ui/TabChrome";
 import { db, getVisibleRecos, getSeenFavoriteRecos, getRepescaReco, toggleRecoInterest, feedbackReco, restoreReco, toggleRecoForToday, markRecoSeenFavorite } from "../../db";
 import { getTasteProfile } from "../../services/recoService";
 import { syncPlansFromCloud } from "../../services/feedService";
@@ -13,15 +13,9 @@ import { PlanWhy, PlanSourceLink } from "../plans/shared";
 import { getTodayKeyMadrid } from "../../utils/time";
 
 const SUBS = [
-  { value: 'cartelera', label: 'Cartelera' },
-  { value: 'series', label: 'Series' },
-  { value: 'movies', label: 'Películas' },
-];
-
-const FILTER_MODES = [
-  { value: 'all', label: 'Todos' },
-  { value: 'favorites', label: 'Favoritos' },
-  { value: 'today', label: 'En Hoy' },
+  { value: 'cartelera', label: 'Cartelera', icon: 'calendario' },
+  { value: 'series', label: 'Series', icon: 'capas' },
+  { value: 'movies', label: 'Películas', icon: 'cine' },
 ];
 
 // Cines de una tarjeta de cartelera como pastillas cortas.
@@ -324,10 +318,6 @@ export default function CineTab() {
   if (!showDiscarded && filterMode === 'favorites') {
     list = [...list, ...((table && seenRecos[table]) || [])].filter(isFavItem);
   }
-  // "En Hoy" funciona igual en cartelera, series y películas (misma regla diaria).
-  if (!showDiscarded && filterMode === 'today') {
-    list = list.filter((p) => p.isForToday === true && p.todaySelectionDate === todayKey);
-  }
 
   const serieMeta = (s) => [
     s.year || null,
@@ -350,20 +340,35 @@ export default function CineTab() {
         isSyncing={isSyncing}
       />
 
-      {/* Botonera fuera del hero: mismo patrón que Planes y Comer */}
+      {/* Botonera fuera del hero: secciones con icono + filtros de icono */}
       <ControlsCard>
-        <PillGroup
-          label="Sección de cine"
-          options={SUBS}
-          value={sub}
-          onChange={(v) => { setSub(v); setShowDiscarded(false); setFilterMode('all'); }}
-        />
-        <PillGroup
-          label="Filtrar por interés"
-          options={FILTER_MODES}
-          value={showDiscarded ? '' : filterMode}
-          onChange={(v) => { setFilterMode(v); setShowDiscarded(false); }}
-        />
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap" role="group" aria-label="Sección de cine">
+            {SUBS.map((s) => (
+              <SectionPill
+                key={s.value}
+                icon={s.icon}
+                label={s.label}
+                active={sub === s.value}
+                onClick={() => { setSub(s.value); setShowDiscarded(false); setFilterMode('all'); }}
+              />
+            ))}
+          </div>
+          <div className="flex items-center gap-1.5" role="group" aria-label="Filtrar por interés">
+            <IconToggle
+              icon="lupa"
+              label="Todos"
+              active={!showDiscarded && filterMode === 'all'}
+              onClick={() => { setFilterMode('all'); setShowDiscarded(false); }}
+            />
+            <IconToggle
+              icon="corazon"
+              label="Favoritos"
+              active={!showDiscarded && filterMode === 'favorites'}
+              onClick={() => { setFilterMode('favorites'); setShowDiscarded(false); }}
+            />
+          </div>
+        </div>
         {discarded.length > 0 && (
           <button onClick={() => setShowDiscarded(!showDiscarded)} type="button"
             className="w-full text-center text-xs font-bold text-conn-muted min-h-[36px]">
@@ -430,14 +435,12 @@ export default function CineTab() {
             <p className="font-theme-title text-[15px] font-black text-conn-deep mb-1 mt-3">
               {filterMode === 'favorites'
                 ? 'Sin favoritos aquí todavía'
-                : filterMode === 'today'
-                  ? 'Nada en Hoy en esta sección'
-                  : 'Nada por aquí todavía'}
+                : 'Nada por aquí todavía'}
             </p>
             <p className="text-xs font-semibold text-conn-muted">
               {filterMode === 'all'
                 ? 'Sincroniza para traer las novedades de la semana.'
-                : 'Marca el corazón o "Añadir a Hoy" en una tarjeta para verla aquí.'}
+                : 'Marca el corazón en una tarjeta para verla aquí.'}
             </p>
           </div>
         )}
