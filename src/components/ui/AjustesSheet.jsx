@@ -69,6 +69,15 @@ export default function AjustesSheet({ open, onClose }) {
     load();
   };
 
+  const reintentarEnvio = async () => {
+    setBusy(true);
+    setMsg('');
+    const res = await quizáSubirPerfil(db, { force: true }).catch(() => ({ ok: false, error: 'error de red' }));
+    setBusy(false);
+    setMsg(res.ok ? 'Perfil subido: la próxima generación ya lo usará' : `No funcionó: ${res.error || res.skipped || 'razón desconocida'}`);
+    load();
+  };
+
   const borrarToken = async () => {
     await db.preferences.delete('ghToken');
     await db.preferences.delete('profileSync');
@@ -185,9 +194,15 @@ export default function AjustesSheet({ open, onClose }) {
             </button>
           </div>
           {hasToken && (
-            <button type="button" onClick={borrarToken} className="text-[11px] font-bold text-conn-muted hover:text-red-500 min-h-[36px]">
-              Desactivar y borrar token
-            </button>
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={reintentarEnvio} disabled={busy}
+                className="px-4 py-2 rounded-full text-[11px] font-black bg-conn-mist text-conn-tealDark min-h-[36px] active:scale-95 disabled:opacity-50">
+                {busy ? 'Enviando…' : 'Reintentar envío'}
+              </button>
+              <button type="button" onClick={borrarToken} className="text-[11px] font-bold text-conn-muted hover:text-red-500 min-h-[36px]">
+                Desactivar y borrar token
+              </button>
+            </div>
           )}
           {msg && <p className="text-[11px] font-bold text-conn-deep" role="status">{msg}</p>}
         </section>
@@ -211,7 +226,7 @@ export default function AjustesSheet({ open, onClose }) {
         </section>
 
         <p className="text-[9px] font-bold text-conn-muted/60 text-center pt-1">
-          Iconos: Noto Emoji (Google), Apache 2.0 · Asistente Sevilla
+          Iconos: Noto Emoji (Google), Apache 2.0 · Planes Sevilla
         </p>
       </div>
     </div>

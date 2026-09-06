@@ -186,7 +186,7 @@ function normalizePlan(p, now) {
     categories: Array.isArray(categoriesRaw) ? categoriesRaw.map(String) : [String(categoriesRaw || 'Varios')],
     startsAt: p.startsAt || (isRuta ? 'Sin fecha fija' : 'Próximamente'),
     endsAt: p.endsAt || null,
-    whyMatch: p.whyMatch || 'Sugerido por el asistente.',
+    whyMatch: p.whyMatch || 'Sugerido por Planes.',
     longDescription: p.longDescription || p.summary || '',
     sourceUrl: normalizeUrl(p.sourceUrl),
     expiresAt: toExpiresAt(p, now),

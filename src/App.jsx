@@ -50,8 +50,8 @@ export default function App() {
           <div className="flex items-center gap-2.5">
             <AppIcon />
             <div className="leading-none">
-              <p className="text-[9px] font-extrabold text-conn-muted uppercase tracking-widest">Asistente</p>
-              <p className="text-base font-black text-conn-deep">Sevilla</p>
+              <p className="text-[9px] font-extrabold text-conn-muted uppercase tracking-widest">Sevilla</p>
+              <p className="text-base font-black text-conn-deep">Planes</p>
             </div>
           </div>
           <button
@@ -69,7 +69,7 @@ export default function App() {
         <main className="flex-1 px-4 pt-3 pb-8 overflow-y-auto">
           {!isDbLoaded ? (
             <div className="text-center py-16 px-4" role="status" aria-live="polite">
-              <p className="text-sm font-semibold text-slate-400">Preparando tu asistente…</p>
+              <p className="text-sm font-semibold text-slate-400">Preparando tus planes…</p>
               <p className="text-xs text-slate-400 mt-1">Cargando base local</p>
             </div>
           ) : (

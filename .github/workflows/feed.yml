@@ -16,9 +16,10 @@ on:
         default: ''
         type: choice
         options: ['', A, B, C, D]
-  # Automático semanal (activar cuando dirección diga "ya funciona"):
-  # schedule:
-  #   - cron: '0 6 * * 3'
+  # Automático: lunes (planning fresco de la semana) + miércoles
+  # (cosecha completa tras las publicaciones de programación del martes).
+  schedule:
+    - cron: '0 6 * * 1,3'
 
 permissions:
   contents: write
