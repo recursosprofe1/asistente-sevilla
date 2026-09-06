@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FBadge, FGlyph, CategoryBadge } from "../illustrations/NotoBadges";
-import { db, getVisibleRecos, toggleRecoInterest, discardReco, restoreReco } from "../../db";
+import { db, getVisibleRecos, toggleRecoInterest, feedbackReco, restoreReco } from "../../db";
 import { getTasteProfile } from "../../services/recoService";
 import { syncPlansFromCloud } from "../../services/feedService";
 import { PlanCard } from "./PlanesTab";
@@ -30,7 +30,7 @@ function scoreByProfile(item, profile, kind) {
   return score;
 }
 
-function RecoCard({ item, kindLabel, meta, onFav, onDiscard, onRestore, isExpanded, onToggle, discarded }) {
+function RecoCard({ item, kindLabel, meta, onFav, onFeedback, onRestore, isExpanded, onToggle, discarded }) {
   const isInterested = item.userStatus === "interested" || item.status === "interested";
   return (
     <article className="conn-card overflow-hidden transition-all">
@@ -73,26 +73,33 @@ function RecoCard({ item, kindLabel, meta, onFav, onDiscard, onRestore, isExpand
       </button>
 
       {!discarded && (
-        <div className="px-4 pb-3 flex items-center gap-2">
-          <button
-            onClick={(e) => onFav(e, item)}
-            type="button"
-            aria-pressed={isInterested}
-            aria-label={isInterested ? `Quitar ${item.title} de favoritos` : `Guardar ${item.title} en favoritos`}
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-red-50 active:scale-90 transition-all"
-          >
-            <FBadge name="corazon" color={isInterested ? "#E5484D" : "#CBD5E1"} size={40} />
-          </button>
-          <button
-            onClick={(e) => onDiscard(e, item)}
-            type="button"
-            aria-label={`Descartar ${item.title}`}
-            className="flex items-center gap-1 px-3 py-2 rounded-full text-xs font-bold text-conn-muted hover:text-red-500 hover:bg-red-50 transition-colors min-h-[44px]"
-          >
-            <FGlyph name="ojo" size={16} color="#5E8B91" />
-            Descartar
-          </button>
-        </div>
+          <div className="flex-1 flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={(e) => onFav(e, item)}
+              type="button"
+              aria-pressed={isInterested}
+              aria-label={isInterested ? `Quitar ${item.title} de favoritos` : `Guardar ${item.title} en favoritos`}
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-red-50 active:scale-90 transition-all"
+            >
+              <FBadge name="corazon" color={isInterested ? "#E5484D" : "#CBD5E1"} size={40} />
+            </button>
+            <button
+              onClick={(e) => onFeedback(e, item, 'seen')}
+              type="button"
+              aria-label={`Marcar ${item.title} como vista`}
+              className="px-3 py-2 rounded-full text-xs font-black bg-conn-mist text-conn-tealDark min-h-[44px] transition-all active:scale-95"
+            >
+              Vista ✓
+            </button>
+            <button
+              onClick={(e) => onFeedback(e, item, 'disliked')}
+              type="button"
+              aria-label={`No me gusta ${item.title}`}
+              className="px-3 py-2 rounded-full text-xs font-bold text-conn-muted bg-conn-aqua hover:text-red-500 hover:bg-red-50 min-h-[44px] transition-colors"
+            >
+              No me gusta
+            </button>
+          </div>
       )}
 
       {isExpanded && (
@@ -211,11 +218,13 @@ export default function CineTab() {
     await load();
     showToast(nowFav ? "Guardado en favoritos (afina tus gustos)" : "Desmarcado");
   };
-  const onDiscardReco = (table) => async (e, item) => {
+  const onFeedbackReco = (table, kind) => async (e, item) => {
     e.stopPropagation();
-    await discardReco(table, item.id);
+    const promoted = await feedbackReco(table, item.id);
     await load();
-    showToast("Descartado (afina tus gustos)");
+    showToast(kind === 'seen'
+      ? (promoted ? `Vista — entra en su lugar: ${promoted.title}` : "Vista — afinará tus gustos")
+      : (promoted ? `Descartada — entra en su lugar: ${promoted.title}` : "Descartada — evitaré similares"));
   };
   const onRestoreReco = (table) => async (e, item) => {
     e.stopPropagation();
@@ -312,7 +321,7 @@ export default function CineTab() {
             <RecoCard
               key={item.id} item={item} kindLabel={sub === 'series' ? 'Serie' : 'Peli'}
               meta={sub === 'series' ? serieMeta(item) : movieMeta(item)}
-              onFav={onFavReco(table)} onDiscard={onDiscardReco(table)} onRestore={onRestoreReco(table)}
+              onFav={onFavReco(table)} onFeedback={onFeedbackReco(table)} onRestore={onRestoreReco(table)}
               isExpanded={expandedId === item.id} onToggle={toggleExpanded} discarded
             />
           )
@@ -331,7 +340,7 @@ export default function CineTab() {
           <RecoCard
             key={item.id} item={item} kindLabel={sub === 'series' ? 'Serie' : 'Peli'}
             meta={sub === 'series' ? serieMeta(item) : movieMeta(item)}
-            onFav={onFavReco(table)} onDiscard={onDiscardReco(table)} onRestore={onRestoreReco(table)}
+            onFav={onFavReco(table)} onFeedback={onFeedbackReco(table)} onRestore={onRestoreReco(table)}
             isExpanded={expandedId === item.id} onToggle={toggleExpanded} discarded={false}
           />
         ))}

@@ -478,8 +478,10 @@ async function fullRun() {
     const noTerror = (t) => !/terror|reality|telenovela/i.test(`${t.title || ''} ${(t.genres || []).join(' ')}`);
     series = notBefore(av.series).filter((p) => noTerror(p) && p.sourceUrl && /^https:\/\//i.test(p.sourceUrl)).map((p) => normalizeSerie(p, nowMs)).slice(0, 8);
     movies = notBefore(av.movies).filter((p) => p.sourceUrl && /^https:\/\//i.test(p.sourceUrl)).map((p) => normalizeMovie(p, nowMs)).slice(0, 8);
-    if (series.length < 5) avMissing.push(`Series ${series.length}/5`);
-    if (movies.length < 5) avMissing.push(`Pelis ${movies.length}/5`);
+    series.forEach((s, i) => { if (i >= 5) s.reserve = true; });
+    movies.forEach((m, i) => { if (i >= 5) m.reserve = true; });
+    if (series.length < 8) avMissing.push(`Series ${series.length}/8`);
+    if (movies.length < 8) avMissing.push(`Pelis ${movies.length}/8`);
   } catch (e) {
     avMissing.push('Series/pelis: fallo IA (' + String(e.message || e).slice(0, 120) + ')');
   }
@@ -490,7 +492,8 @@ async function fullRun() {
     places = notBefore(food.places)
       .filter((p) => p.zone && p.sourceUrl && /^https:\/\//i.test(p.sourceUrl))
       .map((p) => normalizePlace(p, nowMs)).slice(0, 14);
-    if (places.length < 10) foodMissing.push(`Comer ${places.length}/10`);
+    places.forEach((pl, i) => { if (i >= 10) pl.reserve = true; });
+    if (places.length < 14) foodMissing.push(`Comer ${places.length}/14`);
   } catch (e) {
     foodMissing.push('Comer: fallo IA (' + String(e.message || e).slice(0, 120) + ')');
   }

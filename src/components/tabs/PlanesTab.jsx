@@ -392,7 +392,11 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
   const withUnknown = travelMinutes === UNLIMITED_TRAVEL && !showDiscarded ? [...traveled, ...unknown] : traveled;
   const byCategory = activeCategory === 'Todas' ? withUnknown : withUnknown.filter((p) => withNormalizedCategory(p) === activeCategory);
 
-  const sourceList = byCategory;
+  const sourceList = byCategory.filter((p) => {
+    // El cine vive en su pestaña: fuera de lista, filtros y conteo.
+    if (String(p.id).startsWith('cine-') || p.id === 'plan-cine-sevilla') return false;
+    return (withNormalizedCategory(p) !== 'Cine');
+  });
   const grouped = sourceList.reduce((acc, plan) => {
     const cat = withNormalizedCategory(plan);
     if (!acc[cat]) acc[cat] = [];
@@ -407,7 +411,7 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
     if (grouped['Cine'].length === 0) delete grouped['Cine'];
   }
   const categories = sortCategories(Object.keys(grouped).filter((c) => (grouped[c] || []).length > 0));
-  const availableCategories = sortCategories([...new Set(base.map(withNormalizedCategory))]);
+  const availableCategories = sortCategories([...new Set(base.map(withNormalizedCategory))].filter((c) => c !== 'Cine'));
 
   const cineNames = [...new Set(cineStructuredAll.map((p) => p.venue || 'Cines de Sevilla'))].sort((a, b) => a.localeCompare(b, 'es'));
   const cineVisible = activeCine === 'Todos' ? cineStructuredAll : cineStructuredAll.filter((p) => (p.venue || 'Cines de Sevilla') === activeCine);

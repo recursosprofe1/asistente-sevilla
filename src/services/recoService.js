@@ -51,8 +51,9 @@ export async function getTasteProfile(db) {
   try {
     for (const table of ['series', 'movies', 'places']) {
       const all = await db.table(table).toArray();
-      const liked = all.filter((r) => r.userStatus === 'interested' || r.status === 'interested');
-      const disliked = all.filter((r) => r.userStatus === 'discarded' || r.status === 'discarded');
+      // Gusta: favoritos + vistos/ya fui. Evita: descartes con motivo "no me gusta".
+      const liked = all.filter((r) => r.userStatus === 'interested' || r.status === 'interested' || r.discardReason === 'seen');
+      const disliked = all.filter((r) => (r.userStatus === 'discarded' || r.status === 'discarded') && r.discardReason !== 'seen');
       if (liked.length > 0 || disliked.length > 0) {
         const key = table === 'series' ? 'series' : table === 'movies' ? 'movies' : 'food';
         profile[key].learnedLikes = topTags(liked, table === 'places' ? 'cuisine' : 'genres');
@@ -159,7 +160,7 @@ export function buildAudiovisualPrompt(profile) {
     '  "genres": ["Thriller"], "platforms": ["Prime Video"],',
     '  "summary": "1-2 frases sin destripes", "whyMatch": "1 frase",',
     '  "sourceUrl": "https://… (ficha real)" } ] }',
-    'REPARTO OBLIGATORIO: 5 series + 5 películas.',
+    'REPARTO OBLIGATORIO: 8 series + 8 películas (5 visibles + 3 de reserva por si descarta).',
     `SERIES (gustos: ${s.genres.join(', ')}; evitar: ${s.avoid.join(', ')}; preferencia TERMINADAS (${s.finishedFirst ? 'prioriza terminadas, valen en curso' : 'indiferente'}); audio ${s.audio}; ritmo ${s.pace}; le marcaron: ${s.refs.join(', ')}; ve en: ${s.platforms.join(', ')}.`,
     s.learnedLikes?.length ? `Aprendido que le gusta: ${s.learnedLikes.join(', ')}.` : '',
     s.learnedAvoid?.length ? `Aprendido que evita: ${s.learnedAvoid.join(', ')}.` : '',
@@ -184,7 +185,7 @@ export function buildFoodPrompt(profile) {
     '  "summary": "1 frase del sitio",',
     '  "whyMatch": "1 frase por qué le pega",',
     '  "sourceUrl": "https://… (Google Maps o web real del sitio)" } ] }',
-    'REPARTO OBLIGATORIO: 10 sitios, variando cocinas y barrios (no repetir los de semanas anteriores si los conoces por el contexto).',
+    'REPARTO OBLIGATORIO: 14 sitios (10 visibles + 4 de reserva por si descarta), variando cocinas y barrios (no repetir los de semanas anteriores si los conoces por el contexto).',
     `GUSTOS: cocinas ${f.cuisines.join(', ')}; precio ${f.price}; dieta: ${f.diet}; momentos: ${f.moments.join(', ')}; cadenas: ${f.chains ? 'valen' : 'solo locales'}.`,
     f.learnedLikes?.length ? `Aprendido que le gusta: ${f.learnedLikes.join(', ')}.` : '',
     f.learnedAvoid?.length ? `Aprendido que evita: ${f.learnedAvoid.join(', ')}.` : '',
@@ -215,7 +216,8 @@ export async function syncRecosFromFeed(db, table, normalize, incomingRaw) {
       status: prev.status ?? 'available',
       userStatus: prev.userStatus ?? 'new',
       interestedAt: prev.interestedAt ?? null,
-      discardedAt: prev.discardedAt ?? null
+      discardedAt: prev.discardedAt ?? null,
+      discardReason: prev.discardReason ?? null
     };
   });
 

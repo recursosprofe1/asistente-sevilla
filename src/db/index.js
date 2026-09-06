@@ -74,6 +74,7 @@ export async function getVisibleRecos(table) {
   const all = await db.table(table).toArray();
   return all.filter((r) => {
     if (!r) return false;
+    if (r.reserve === true) return false; // reservas ocultas hasta promocionar
     if (r.userStatus === 'discarded' || r.status === 'discarded') return false;
     if (r.feedStatus === 'expired' || r.feedStatus === 'removed') return false;
     return true;
@@ -94,8 +95,30 @@ export async function toggleRecoInterest(table, id) {
 
 export async function discardReco(table, id) {
   await db.table(table).update(id, {
-    userStatus: 'discarded', status: 'discarded', discardedAt: Date.now()
+    userStatus: 'discarded', status: 'discarded', discardedAt: Date.now(), discardReason: 'disliked'
   });
+  return promoteReserve(table);
+}
+
+// Motivo del descarte: 'seen' (vista/ya fui: gusta + pide repuesto) o
+// 'disliked' (no me gusta: evita similares). Libera una reserva si queda.
+export async function feedbackReco(table, id, kind) {
+  const reason = kind === 'seen' ? 'seen' : 'disliked';
+  await db.table(table).update(id, {
+    userStatus: 'discarded', status: 'discarded', discardedAt: Date.now(), discardReason: reason
+  });
+  return promoteReserve(table);
+}
+
+// Pasa a visible la reserva más antigua. Devuelve el item o null.
+export async function promoteReserve(table) {
+  const reserves = (await db.table(table).toArray())
+    .filter((r) => r && r.reserve === true)
+    .sort((a, b) => (a.lastSeenAt || 0) - (b.lastSeenAt || 0));
+  if (reserves.length === 0) return null;
+  const next = reserves[0];
+  await db.table(table).update(next.id, { reserve: false });
+  return next;
 }
 
 export async function restoreReco(table, id) {

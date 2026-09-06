@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FBadge, FGlyph } from "../illustrations/NotoBadges";
-import { db, getVisibleRecos, toggleRecoInterest, discardReco, restoreReco } from "../../db";
+import { db, getVisibleRecos, toggleRecoInterest, feedbackReco, restoreReco } from "../../db";
 import { getTasteProfile } from "../../services/recoService";
 import { syncPlansFromCloud } from "../../services/feedService";
 import { PlanWhy, PlanSourceLink } from "../plans/shared";
@@ -76,11 +76,13 @@ export default function ComerTab() {
     await load();
     showToast(nowFav ? "Guardado en favoritos (afina tus gustos)" : "Desmarcado");
   };
-  const onDiscard = async (e, item) => {
+  const onFeedback = async (e, item, kind) => {
     e.stopPropagation();
-    await discardReco('places', item.id);
+    const promoted = await feedbackReco('places', item.id);
     await load();
-    showToast("Descartado (afina tus gustos)");
+    showToast(kind === 'seen'
+      ? (promoted ? `Ya fui — entra en su lugar: ${promoted.title}` : "Ya fui — afinará tus gustos")
+      : (promoted ? `Descartado — entra en su lugar: ${promoted.title}` : "Descartado — evitaré similares"));
   };
   const onRestore = async (e, item) => {
     e.stopPropagation();
@@ -175,7 +177,7 @@ export default function ComerTab() {
               </button>
 
               {!showDiscarded && (
-                <div className="px-4 pb-3 flex items-center gap-2">
+                <div className="px-4 pb-3 flex items-center gap-1.5 flex-wrap">
                   <button
                     onClick={(e) => onFav(e, place)}
                     type="button"
@@ -186,13 +188,20 @@ export default function ComerTab() {
                     <FBadge name="corazon" color={isInterested ? "#E5484D" : "#CBD5E1"} size={40} />
                   </button>
                   <button
-                    onClick={(e) => onDiscard(e, place)}
+                    onClick={(e) => onFeedback(e, place, 'seen')}
                     type="button"
-                    aria-label={`Descartar ${place.title}`}
-                    className="flex items-center gap-1 px-3 py-2 rounded-full text-xs font-bold text-conn-muted hover:text-red-500 hover:bg-red-50 transition-colors min-h-[44px]"
+                    aria-label={`Ya fui a ${place.title}`}
+                    className="px-3 py-2 rounded-full text-xs font-black bg-conn-mist text-conn-tealDark min-h-[44px] transition-all active:scale-95"
                   >
-                    <FGlyph name="ojo" size={16} color="#5E8B91" />
-                    Descartar
+                    Ya fui ✓
+                  </button>
+                  <button
+                    onClick={(e) => onFeedback(e, place, 'disliked')}
+                    type="button"
+                    aria-label={`No me gusta ${place.title}`}
+                    className="px-3 py-2 rounded-full text-xs font-bold text-conn-muted bg-conn-aqua hover:text-red-500 hover:bg-red-50 min-h-[44px] transition-colors"
+                  >
+                    No me gusta
                   </button>
                 </div>
               )}
