@@ -51,7 +51,7 @@ Excluidos de todo: deporte, toros, religioso y flamenco.
 | Fuente | URL | Grupo | Por qué |
 |--------|-----|-------|---------|
 | entradas.huelva.es | https://entradas.huelva.es/ | A | Gran Teatro + Colón con precio |
-| Patronato Turismo Huelva | https://www.turismohuelva.org/ | A | Pueblos y condado. Sustituye a Diputación Huelva (404/TCP intermitente al runner: 3 avisos en 2 días); verificada 2026-09-06 con la UA del robot |
+| Diputación Huelva | https://www.diphuelva.es/cultura/ | A | Pueblos y condado. Intermitente al runner, pero ÚNICA fuente provincial OK a Node (turismohuelva.org = TLS con cadena incompleta rompe undici; huelva.es/agenda = SPA sin enlaces de eventos). El censo automático la jubila y repone si muere de verdad. |
 | Moguer (Junta) | https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/actividades/moguer | B | Huelva, fiable Junta |
 | Almonte (Junta) | https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/actividades/almonte | B | Huelva, fiable Junta |
 | Aracena (Junta) | https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/actividades/aracena | C | Sierra |
