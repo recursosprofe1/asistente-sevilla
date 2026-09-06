@@ -52,8 +52,8 @@ Excluidos de todo: deporte, toros, religioso y flamenco.
 |--------|-----|-------|---------|
 | entradas.huelva.es | https://entradas.huelva.es/ | A | Gran Teatro + Colón con precio |
 | Diputación Huelva | https://www.diphuelva.es/cultura/ | A | Pueblos y condado |
-| Huelva noticias | https://www.huelva.es/portal/es/noticias | B | Actualidad cultural capital |
-| Huelva cultura | https://www.huelva.es/portal/es/cultura | B | Agenda capital |
+| Moguer (Junta) | https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/actividades/moguer | B | Huelva, fiable Junta |
+| Almonte (Junta) | https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/actividades/almonte | B | Huelva, fiable Junta |
 | Aracena (Junta) | https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/actividades/aracena | C | Sierra |
 | Punta Umbría (Junta) | https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/actividades/punta-umbria | D | Costa |
 
@@ -63,9 +63,11 @@ Excluidos de todo: deporte, toros, religioso y flamenco.
 | Gran Teatro Falla | https://laciudad.cadiz.es/programacion-gran-teatro-falla.asp | A | Tabla de fechas |
 | Cádiz programación | https://institucional.cadiz.es/programacion_cultural | A | Agenda capital |
 | Casa Iberoamérica | https://institucional.cadiz.es/area/Casa-de-Iberoamerica | B | Expos y ciclos |
+| Jerez (Junta) | https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/actividades/jerez-de-la-frontera | B | Cádiz, fiable Junta |
 | Baluarte Candelaria | https://institucional.cadiz.es/area/Baluarte-de-la-Candelaria | C | Expos y ciclos |
 | Planeamos Diputación | https://www.dipucadiz.es/cultura/Varios/planeamos-2026/ | D | 455 acts pueblos, no-tópico |
 | Diputación Cádiz | https://www.dipucadiz.es/ | D | Sustituye a La Ciudad (ficha fina) |
+| Rota (Junta) | https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/actividades/rota | D | Cádiz costa, fiable Junta |
 
 ## RUTAS (8 + Vías Verdes en fijas)
 | Fuente | URL | Grupo | Por qué |

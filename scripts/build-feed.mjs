@@ -81,17 +81,19 @@ const POOL = [
   // HUELVA (6 directas + 2 refuerzos documentados)
   { name: 'entradas.huelva.es', url: 'https://entradas.huelva.es/', zona: 'Huelva', grupo: 'A' },
   { name: 'Diputación Huelva', url: 'https://www.diphuelva.es/cultura/', zona: 'Huelva', grupo: 'A' },
-  { name: 'Huelva noticias', url: 'https://www.huelva.es/portal/es/noticias', zona: 'Huelva', grupo: 'B' },
-  { name: 'Huelva cultura (refuerzo Dipu)', url: 'https://www.diphuelva.es/cultura/', zona: 'Huelva', grupo: 'B' },
+  { name: 'Moguer (Junta)', url: 'https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/actividades/moguer', zona: 'Huelva', grupo: 'B' },
+  { name: 'Almonte (Junta)', url: 'https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/actividades/almonte', zona: 'Huelva', grupo: 'B' },
   { name: 'Aracena (Junta)', url: 'https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/actividades/aracena', zona: 'Huelva', grupo: 'C' },
   { name: 'Punta Umbría (Junta)', url: 'https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/actividades/punta-umbria', zona: 'Huelva', grupo: 'D' },
   // CÁDIZ (6 directas + 2 refuerzos documentados)
   { name: 'Gran Teatro Falla', url: 'https://laciudad.cadiz.es/programacion-gran-teatro-falla.asp', zona: 'Cádiz', grupo: 'A' },
   { name: 'Cádiz cultura (programación)', url: 'https://institucional.cadiz.es/programacion_cultural', zona: 'Cádiz', grupo: 'A' },
   { name: 'Casa Iberoamérica', url: 'https://institucional.cadiz.es/area/Casa-de-Iberoamerica', zona: 'Cádiz', grupo: 'B' },
+  { name: 'Jerez (Junta)', url: 'https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/actividades/jerez-de-la-frontera', zona: 'Cádiz', grupo: 'B' },
   { name: 'Baluarte Candelaria', url: 'https://institucional.cadiz.es/area/Baluarte-de-la-Candelaria', zona: 'Cádiz', grupo: 'C' },
   { name: 'Planeamos Diputación', url: 'https://www.dipucadiz.es/cultura/Varios/planeamos-2026/', zona: 'Cádiz', grupo: 'D' },
   { name: 'Diputación Cádiz', url: 'https://www.dipucadiz.es/', zona: 'Cádiz', grupo: 'D' },
+  { name: 'Rota (Junta)', url: 'https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/actividades/rota', zona: 'Cádiz', grupo: 'D' },
   // RUTAS (8 directas + Vías Verdes en fijas)
   { name: 'Sierra Norte senderos', url: 'https://www.sierranortedesevilla.es/actividades/senderismo/senderos-sierra-norte-de-sevilla.html', zona: 'Rutas', grupo: 'A' },
   { name: 'Castañares Constantina', url: 'https://www.juntadeandalucia.es/medioambiente/portal/web/ventanadelvisitante/detalle-buscador-mapa/-/asset_publisher/Jlbxh2qB3NwR/content/los-casta%C3%B1ares/255035', zona: 'Rutas', grupo: 'A' },
