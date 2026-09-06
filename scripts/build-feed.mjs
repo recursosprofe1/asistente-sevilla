@@ -333,6 +333,26 @@ function loadDatedFeeds(dir = 'feeds') {
 
 function feedDayMs(day) { return Date.parse(day + 'T12:00:00Z'); }
 
+// Perfil del usuario subido por la app (perfil.json en la raíz del repo).
+// Solo etiquetas agregadas ("Ciencia ficción x4"): la fusión pisa los
+// learned* de la semilla; si no hay fichero, todo sigue con el cuestionario.
+function loadUserPerfil(file = 'perfil.json') {
+  try { return JSON.parse(readFileSync(file, 'utf8')); } catch { return null; }
+}
+function effectiveProfile(userPerfil) {
+  const p = JSON.parse(JSON.stringify(TASTE_SEED));
+  if (!userPerfil || userPerfil.schemaVersion !== 1) return { profile: p, applied: false };
+  let touched = false;
+  for (const k of ['series', 'movies', 'food']) {
+    const u = userPerfil[k];
+    if (!u) continue;
+    if (Array.isArray(u.learnedLikes) && u.learnedLikes.length) { p[k].learnedLikes = u.learnedLikes.map(String); touched = true; }
+    if (Array.isArray(u.learnedAvoid) && u.learnedAvoid.length) { p[k].learnedAvoid = u.learnedAvoid.map(String); touched = true; }
+    if (k === 'food' && Array.isArray(u.learnedZones) && u.learnedZones.length) { p[k].learnedZones = u.learnedZones.map(String); touched = true; }
+  }
+  return { profile: p, applied: touched };
+}
+
 // Títulos (minúsculas, sin espacios sobrantes) servidos dentro de la ventana.
 function recentFeedTitles(feeds, nowMs, windowDays = NO_REPEAT_DAYS) {
   const cutoff = nowMs - windowDays * 86400000;
@@ -579,6 +599,10 @@ async function fullRun() {
   // archivo tiene recursos.
   const now = new Date();
   const nowMs = now.getTime();
+  const USER_PERFIL = loadUserPerfil();
+  const PERFIL = effectiveProfile(USER_PERFIL);
+  if (PERFIL.applied) console.log('Perfil del usuario: aplicado (perfil.json).');
+  else console.log('Perfil del usuario: sin uso (semilla del cuestionario).');
   const datedFeeds = loadDatedFeeds();
   const avoid = recentFeedTitles(datedFeeds, nowMs);
   const titlesOf = (arr) => arr.map((x) => String(x.title || '').toLowerCase().trim()).filter(Boolean);
@@ -600,7 +624,7 @@ async function fullRun() {
   const avMissing = [], foodMissing = [];
   const noTerror = (t) => !/terror|reality|telenovela/i.test(`${t.title || ''} ${(t.genres || []).join(' ')}`);
   const genAV = async (avoidSets) => {
-    const avRaw = cleanJson((await geminiGenerate(buildAudiovisualPrompt(TASTE_SEED, {
+    const avRaw = cleanJson((await geminiGenerate(buildAudiovisualPrompt(PERFIL.profile, {
       series: [...avoidSets.series], movies: [...avoidSets.movies]
     }))).text);
     const av = JSON.parse(avRaw);
@@ -650,7 +674,7 @@ async function fullRun() {
   }
   try {
     const genFood = async (avoidSet) => {
-      const foodRaw = cleanJson((await geminiGenerate(buildFoodPrompt(TASTE_SEED, { places: [...avoidSet] }))).text);
+      const foodRaw = cleanJson((await geminiGenerate(buildFoodPrompt(PERFIL.profile, { places: [...avoidSet] }))).text);
       const food = JSON.parse(foodRaw);
       const raw = (food.places || []).length;
       const ok = notBefore(food.places, avoidSet)
@@ -722,6 +746,7 @@ async function fullRun() {
     `- Fuentes con aviso: ${errors.length ? errors.join(' / ') : 'ninguna'}`,
     `- Cines con aviso: ${cineErrors.length ? cineErrors.join(' / ') : 'ninguno'}`,
     `- Válido hasta: ${feed.validUntil}`,
+    `- Perfil del usuario: ${PERFIL.applied ? 'aplicado (' + (USER_PERFIL?.generatedAt || 'sin fecha') + ')' : 'semilla del cuestionario'}`,
     `- Intentos de modelo: ${MODEL_ATTEMPTS.length ? MODEL_ATTEMPTS.join(' / ') : 'primero OK (' + MODEL_USED + ')'}`,
   ].join('\n');
   writeFileSync('feeds/last-run.md', report);
@@ -735,4 +760,4 @@ if (isMainModule) {
 }
 
 // Exportados para tests (Vitest) sin ejecutar la cocina al importar.
-export { normCat, zoneOf, toIsoMadrid, isoWeekNumber, coerceTravel, normTitle, isExcluded, recentFeedTitles, backfillFromArchive, feedDayMs, NO_REPEAT_DAYS };
+export { normCat, zoneOf, toIsoMadrid, isoWeekNumber, coerceTravel, normTitle, isExcluded, recentFeedTitles, backfillFromArchive, feedDayMs, NO_REPEAT_DAYS, effectiveProfile, loadUserPerfil };

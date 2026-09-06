@@ -3,6 +3,7 @@
 // la base llega como parámetro. Coste 0, 100% local el perfil.
 
 import { getTodayKeyMadrid } from '../utils/time.js';
+import { weightedTopTags, formatTagScore } from '../utils/tasteLearning.js';
 
 export const TASTE_SEED = {
   series: {
@@ -35,21 +36,12 @@ export const TASTE_SEED = {
   }
 };
 
-function topTags(items, key, limit = 6) {
-  const counts = {};
-  for (const it of items) {
-    const vals = it[key] || it.tags || [];
-    for (const v of (Array.isArray(vals) ? vals : [vals])) {
-      if (!v) continue;
-      counts[v] = (counts[v] || 0) + 1;
-    }
-  }
-  return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, limit).map(([v, n]) => `${v} x${n}`);
-}
-
-// Perfil efectivo = semilla del cuestionario + favoritos (gusta) y papelera (evitar).
-export async function getTasteProfile(db) {
+// Perfil efectivo = semilla del cuestionario + decisiones del usuario
+// (favoritos y vistas = gusta; descartes con motivo = evitar), ponderadas
+// por cercanía en el tiempo: ver tasteLearning.js.
+export async function getTasteProfile(db, nowMs = Date.now()) {
   const profile = JSON.parse(JSON.stringify(TASTE_SEED));
+  const fmt = (rows) => rows.map(formatTagScore);
   try {
     for (const table of ['series', 'movies', 'places']) {
       const all = await db.table(table).toArray();
@@ -58,10 +50,10 @@ export async function getTasteProfile(db) {
       const disliked = all.filter((r) => (r.userStatus === 'discarded' || r.status === 'discarded') && r.discardReason !== 'seen');
       if (liked.length > 0 || disliked.length > 0) {
         const key = table === 'series' ? 'series' : table === 'movies' ? 'movies' : 'food';
-        profile[key].learnedLikes = topTags(liked, table === 'places' ? 'cuisine' : 'genres');
-        profile[key].learnedAvoid = topTags(disliked, table === 'places' ? 'cuisine' : 'genres');
+        profile[key].learnedLikes = fmt(weightedTopTags(liked, table === 'places' ? 'cuisine' : 'genres', nowMs));
+        profile[key].learnedAvoid = fmt(weightedTopTags(disliked, table === 'places' ? 'cuisine' : 'genres', nowMs));
         if (table === 'places') {
-          const zones = topTags(liked, 'zone', 4).map((s) => s.replace(/ x\d+$/, ''));
+          const zones = weightedTopTags(liked, 'zone', nowMs, 4).map((t) => t.tag);
           if (zones.length > 0) profile.food.learnedZones = zones;
         }
       }

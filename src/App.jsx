@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { db, initializeDatabase } from "./db";
 import BottomNavigation from "./components/BottomNavigation";
+import AjustesSheet from "./components/ui/AjustesSheet";
 import HoyTab from "./components/tabs/HoyTab";
 import PlanesTab from "./components/tabs/PlanesTab";
 import CineTab from "./components/tabs/CineTab";
@@ -18,6 +19,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("hoy");
   const [travelMinutes, setTravelMinutes] = useState(45);
   const [isDbLoaded, setIsDbLoaded] = useState(false);
+  const [showAjustes, setShowAjustes] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -52,10 +54,15 @@ export default function App() {
               <p className="text-base font-black text-conn-deep">Sevilla</p>
             </div>
           </div>
-          <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center font-black text-conn-tealDark text-xs"
-            style={{ boxShadow: '0 6px 14px -6px rgba(10, 91, 102, 0.35)' }}>
+          <button
+            type="button"
+            onClick={() => setShowAjustes(true)}
+            aria-label="Abrir ajustes"
+            className="w-8 h-8 rounded-full bg-white flex items-center justify-center font-black text-conn-tealDark text-xs active:scale-95 transition-all"
+            style={{ boxShadow: '0 6px 14px -6px rgba(10, 91, 102, 0.35)' }}
+          >
             S
-          </div>
+          </button>
         </header>
 
         {/* ── Pestañas de Contenido ────────────────────── */}
@@ -91,6 +98,8 @@ export default function App() {
           activeTab={activeTab}
           onSelectTab={setActiveTab}
         />
+
+        <AjustesSheet open={showAjustes} onClose={() => setShowAjustes(false)} />
       </div>
     </div>
   );

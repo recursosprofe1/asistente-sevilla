@@ -4,6 +4,7 @@ import { TabHero, ControlsCard, IconToggle } from "../ui/TabChrome";
 import { db, getVisibleRecos, getSeenFavoriteRecos, getRepescaReco, toggleRecoInterest, feedbackReco, restoreReco, markRecoSeenFavorite } from "../../db";
 import { getTasteProfile } from "../../services/recoService";
 import { syncPlansFromCloud } from "../../services/feedService";
+import { quizáSubirPerfil } from "../../services/profileSync";
 import { PlanWhy, PlanSourceLink } from "../plans/shared";
 import SeenChoiceDialog from "../reco/SeenChoiceDialog";
 
@@ -15,8 +16,8 @@ const FILTER_MODES = [
 const isFavPlace = (p) => p.userStatus === "interested" || p.status === "interested";
 
 function scorePlace(p, profile) {
-  const likes = (profile.food?.learnedLikes || []).map((s) => s.replace(/ x\d+$/, '').toLowerCase());
-  const avoid = (profile.food?.learnedAvoid || []).map((s) => s.replace(/ x\d+$/, '').toLowerCase());
+  const likes = (profile.food?.learnedLikes || []).map((s) => s.replace(/ x[\d.]+$/, '').toLowerCase());
+  const avoid = (profile.food?.learnedAvoid || []).map((s) => s.replace(/ x[\d.]+$/, '').toLowerCase());
   const zones = (profile.food?.learnedZones || []).map((s) => String(s).toLowerCase());
   const tags = [p.cuisine, p.zone, ...(p.moments || [])].map((s) => String(s || '').toLowerCase());
   let score = 0;
@@ -83,6 +84,7 @@ export default function ComerTab() {
     setIsSyncing(true);
     try {
       const result = await syncPlansFromCloud(db, {});
+      if (result.success) quizáSubirPerfil(db).catch(() => {});
       showToast(result.success
         ? (result.skipped ? 'Ya estás al día' : `Actualizado${result.recoSummary ? ' · ' + result.recoSummary : ''}`)
         : `No se pudo actualizar: ${result.error}`);

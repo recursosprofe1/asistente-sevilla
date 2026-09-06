@@ -4,6 +4,7 @@ import { TabHero, ControlsCard, SectionPill, IconToggle } from "../ui/TabChrome"
 import { db, getVisibleRecos, getSeenFavoriteRecos, getRepescaReco, toggleRecoInterest, feedbackReco, restoreReco, toggleRecoForToday, markRecoSeenFavorite } from "../../db";
 import { getTasteProfile } from "../../services/recoService";
 import { syncPlansFromCloud } from "../../services/feedService";
+import { quizáSubirPerfil } from "../../services/profileSync";
 import { PlanCard, shortCineName } from "./PlanesTab";
 import SeenChoiceDialog from "../reco/SeenChoiceDialog";
 import {
@@ -30,8 +31,8 @@ function cineChipsOf(plan) {
 const isFavItem = (p) => p.userStatus === "interested" || p.status === "interested";
 
 function scoreByProfile(item, profile, kind) {
-  const likes = (profile[kind]?.learnedLikes || []).map((s) => s.replace(/ x\d+$/, '').toLowerCase());
-  const avoid = (profile[kind]?.learnedAvoid || []).map((s) => s.replace(/ x\d+$/, '').toLowerCase());
+  const likes = (profile[kind]?.learnedLikes || []).map((s) => s.replace(/ x[\d.]+$/, '').toLowerCase());
+  const avoid = (profile[kind]?.learnedAvoid || []).map((s) => s.replace(/ x[\d.]+$/, '').toLowerCase());
   const tags = [...(item.genres || []), ...(item.platforms || [])].map((s) => String(s).toLowerCase());
   let score = 0;
   for (const t of tags) {
@@ -241,6 +242,7 @@ export default function CineTab() {
     setIsSyncing(true);
     try {
       const result = await syncPlansFromCloud(db, {});
+      if (result.success) quizáSubirPerfil(db).catch(() => {});
       showToast(result.success
         ? (result.skipped ? 'Ya estás al día' : `Actualizado${result.recoSummary ? ' · ' + result.recoSummary : ''}`)
         : `No se pudo actualizar: ${result.error}`);

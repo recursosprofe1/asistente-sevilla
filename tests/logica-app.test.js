@@ -76,17 +76,18 @@ describe('recoService', () => {
     expect(normalizeSerie({ title: 'X', sourceUrl: 'https://seguro.es' }, 1).sourceUrl).toBe('https://seguro.es');
   });
   it('getTasteProfile aprende likes/avoids de las tablas', async () => {
+    const now = Date.now();
     const rows = {
       series: [
-        { userStatus: 'interested', genres: ['Ciencia ficción'] },
-        { userStatus: 'interested', genres: ['Ciencia ficción'] },
-        { userStatus: 'discarded', discardReason: 'disliked', genres: ['Terror'] }
+        { userStatus: 'interested', genres: ['Ciencia ficción'], interestedAt: now - 2 * 86400000 },
+        { userStatus: 'interested', genres: ['Ciencia ficción'], interestedAt: now - 3 * 86400000 },
+        { userStatus: 'discarded', discardReason: 'disliked', genres: ['Terror'], discardedAt: now - 86400000 }
       ],
       movies: [],
       places: []
     };
     const fakeDb = { table: (t) => ({ toArray: async () => rows[t] }) };
-    const profile = await getTasteProfile(fakeDb);
+    const profile = await getTasteProfile(fakeDb, now);
     expect(profile.series.learnedLikes?.[0]).toMatch(/^Ciencia ficción x2$/);
     expect(profile.series.learnedAvoid?.[0]).toMatch(/^Terror/);
   });

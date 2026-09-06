@@ -5,7 +5,8 @@ const browserGlobals = {
   window: 'readonly', document: 'readonly', console: 'readonly', fetch: 'readonly',
   AbortController: 'readonly', setTimeout: 'readonly', clearTimeout: 'readonly',
   setInterval: 'readonly', clearInterval: 'readonly', Intl: 'readonly', URL: 'readonly',
-  localStorage: 'readonly', navigator: 'readonly'
+  localStorage: 'readonly', navigator: 'readonly', TextEncoder: 'readonly',
+  btoa: 'readonly', atob: 'readonly', Uint8Array: 'readonly'
 };
 
 export default [

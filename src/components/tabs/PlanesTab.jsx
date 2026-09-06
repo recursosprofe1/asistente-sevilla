@@ -3,6 +3,7 @@ import { FBadge, FGlyph, CategoryBadge } from "../illustrations/NotoBadges";
 import { TabHero, IconToggle, RoundIconButton } from "../ui/TabChrome";
 import { db, getFeedMeta } from "../../db";
 import { syncPlansFromCloud } from "../../services/feedService";
+import { quizáSubirPerfil } from "../../services/profileSync";
 import {
   UNLIMITED_TRAVEL,
   getVisiblePlans,
@@ -335,6 +336,7 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
     try {
       const result = await syncPlansFromCloud(db, { signal: controller.signal });
       if (result.success) {
+        quizáSubirPerfil(db).catch(() => {});
         if (result.skipped) {
           showToast("Ya estás al día: el feed no ha cambiado desde la última sincronización");
         } else {

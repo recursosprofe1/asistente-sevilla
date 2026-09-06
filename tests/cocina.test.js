@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normCat, zoneOf, toIsoMadrid, coerceTravel, normTitle, isExcluded, recentFeedTitles, backfillFromArchive, NO_REPEAT_DAYS } from '../scripts/build-feed.mjs';
+import { normCat, zoneOf, toIsoMadrid, coerceTravel, normTitle, isExcluded, recentFeedTitles, backfillFromArchive, NO_REPEAT_DAYS, effectiveProfile } from '../scripts/build-feed.mjs';
 
 describe('toIsoMadrid', () => {
   it('verano: offset +02:00 real', () => {
@@ -96,5 +96,28 @@ describe('ventana anti-repetición y relleno del archivo', () => {
     ];
     const got = backfillFromArchive(older, 'places', new Set(), now, 5);
     expect(got.map((p) => p.title)).toEqual(['Reciente-viejo', 'Antiguo']);
+  });
+});
+
+describe('effectiveProfile (fusión perfil usuario + semilla)', () => {
+  it('pisa solo los learned* y deja intacta la semilla', () => {
+    const user = {
+      schemaVersion: 1,
+      series: { learnedLikes: ['Drama x4'], learnedAvoid: ['Terror x1'] },
+      food: { learnedZones: ['Triana'] }
+    };
+    const { profile, applied } = effectiveProfile(user);
+    expect(applied).toBe(true);
+    expect(profile.series.learnedLikes).toEqual(['Drama x4']);
+    expect(profile.series.learnedAvoid).toEqual(['Terror x1']);
+    expect(profile.food.learnedZones).toEqual(['Triana']);
+    // La semilla del cuestionario sigue presente donde el usuario no ha dicho nada:
+    expect(profile.movies.platforms.length).toBeGreaterThan(0);
+    expect(profile.series.genres.length).toBeGreaterThan(0);
+  });
+  it('sin perfil o con esquema desconocido queda la semilla pura', () => {
+    expect(effectiveProfile(null).applied).toBe(false);
+    expect(effectiveProfile({ schemaVersion: 99 }).applied).toBe(false);
+    expect(effectiveProfile(null).profile.series.learnedLikes).toBeUndefined();
   });
 });
