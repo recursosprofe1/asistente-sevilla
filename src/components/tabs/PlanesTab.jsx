@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { FBadge, FGlyph, CategoryBadge, SyncGlyph } from "../illustrations/NotoBadges";
+import { FBadge, FGlyph, CategoryBadge } from "../illustrations/NotoBadges";
+import { TabHero, PillGroup, RoundIconButton } from "../ui/TabChrome";
 import { db, getFeedMeta } from "../../db";
 import { syncPlansFromCloud } from "../../services/feedService";
 import {
@@ -449,46 +450,28 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
 
   return (
     <div className="space-y-3 pb-28 pt-1">
-      {/* Cabecera de estado */}
-      <div className="conn-hero px-5 pt-5 pb-4 text-white">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <h2 className="font-theme-title text-[22px] font-black leading-tight">Planes</h2>
-            <p className="text-xs font-bold text-white/85 mt-1" role="status">
-              {showDiscarded
-                ? `${discardedPlans.length} en papelera · se purgan a los 7 días`
-                : `${sourceList.length} sugerencias cerca de ti`}
-            </p>
-          </div>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            <button
-              onClick={handleClearRemoteCache}
-              type="button"
-              title="Borrar caché remota (conserva favoritos, Hoy y papelera)"
-              aria-label="Borrar caché remota, conserva favoritos, Hoy y papelera"
-              className="w-9 h-9 flex items-center justify-center rounded-full bg-white/20 text-white active:scale-95 transition-all"
-            >
-              <FGlyph name="papelera" size={18} color="#FFFFFF" />
-            </button>
-            <button
-              onClick={handleSyncCloud}
-              disabled={isSyncing}
-              title="Sincronizar planes"
-              aria-label="Sincronizar planes"
-              className="w-11 h-11 flex items-center justify-center rounded-full bg-white text-conn-tealDark active:scale-95 transition-all disabled:opacity-60"
-              style={{ boxShadow: '0 8px 18px -6px rgba(0, 0, 0, 0.30)' }}
-            >
-              <SyncGlyph size={22} spin={isSyncing} />
-            </button>
-          </div>
-        </div>
+      <TabHero
+        title="Planes"
+        status={showDiscarded
+          ? `${discardedPlans.length} en papelera · se purgan a los 7 días`
+          : `${sourceList.length} sugerencias cerca de ti`}
+        onSync={handleSyncCloud}
+        isSyncing={isSyncing}
+        right={
+          <RoundIconButton
+            icon="papelera"
+            label="Borrar caché remota, conserva favoritos, Hoy y papelera"
+            onClick={handleClearRemoteCache}
+          />
+        }
+      >
         <FeedStatusLine lastSyncedAt={feedMeta?.lastSyncedAt} stale={feedStale} light />
         {feedStale && (
           <p className="text-xs text-conn-amber font-black mt-1" role="status">
             El feed puede estar desactualizado. Sincroniza cuando tengas conexión.
           </p>
         )}
-      </div>
+      </TabHero>
 
       <details className="bg-white rounded-3xl px-4 py-2.5 mx-1" style={{ boxShadow: '0 8px 20px -12px rgba(10, 91, 102, 0.25)' }}>
         <summary className="text-xs font-black text-conn-muted cursor-pointer min-h-[40px] flex items-center">
@@ -534,23 +517,14 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
           })}
         </div>
 
-        {/* Filtros de vista compactos */}
-        <div className="flex items-center gap-1.5 mt-2.5" role="group" aria-label="Filtrar planes">
-          {FILTER_MODES.map((m) => (
-            <button
-              key={m.value}
-              type="button"
-              onClick={() => { setFilterMode(m.value); setShowDiscarded(false); }}
-              aria-pressed={filterMode === m.value && !showDiscarded}
-              className={`px-3 py-1.5 rounded-full text-xs font-black min-h-[36px] ${
-                filterMode === m.value && !showDiscarded
-                  ? 'bg-conn-deep text-white'
-                  : 'bg-conn-aqua text-conn-muted'
-              }`}
-            >
-              {m.label}
-            </button>
-          ))}
+        {/* Filtros de vista: estilo común a las tres pestañas */}
+        <div className="mt-2.5">
+          <PillGroup
+            label="Filtrar planes"
+            options={FILTER_MODES}
+            value={showDiscarded ? '' : filterMode}
+            onChange={(v) => { setFilterMode(v); setShowDiscarded(false); }}
+          />
         </div>
 
         {/* Filtro por categoría: rejilla sin scroll (opción A) */}

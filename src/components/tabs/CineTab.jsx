@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { FBadge, FGlyph, CategoryBadge, SyncGlyph } from "../illustrations/NotoBadges";
+import { FBadge, FGlyph, CategoryBadge } from "../illustrations/NotoBadges";
+import { TabHero, ControlsCard, PillGroup } from "../ui/TabChrome";
 import { db, getVisibleRecos, getSeenFavoriteRecos, getRepescaReco, toggleRecoInterest, feedbackReco, restoreReco, toggleRecoForToday, markRecoSeenFavorite } from "../../db";
 import { getTasteProfile } from "../../services/recoService";
 import { syncPlansFromCloud } from "../../services/feedService";
@@ -123,16 +124,18 @@ function RecoCard({ item, kindLabel, meta, onFav, onToggleToday, onSeen, onFeedb
               onClick={(e) => onSeen(e, item)}
               type="button"
               aria-label={`Marcar ${item.title} como vista`}
-              className="px-3 py-2 rounded-full text-xs font-black bg-conn-mist text-conn-tealDark min-h-[44px] transition-all active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-black bg-conn-mist text-conn-tealDark min-h-[44px] transition-all active:scale-95"
             >
-              Vista ✓
+              <FGlyph name="check" size={16} />
+              Vista
             </button>
             <button
               onClick={(e) => onFeedback(e, item, 'disliked')}
               type="button"
               aria-label={`No me gusta ${item.title}`}
-              className="px-3 py-2 rounded-full text-xs font-bold text-conn-muted bg-conn-aqua hover:text-red-500 hover:bg-red-50 min-h-[44px] transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold text-conn-muted bg-conn-aqua hover:text-red-500 hover:bg-red-50 min-h-[44px] transition-colors"
             >
+              <FGlyph name="x" size={16} />
               No me gusta
             </button>
           </div>
@@ -340,62 +343,34 @@ export default function CineTab() {
 
   return (
     <div className="space-y-3 pb-28 pt-1">
-      <div className="conn-hero px-5 pt-5 pb-4 text-white">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <h2 className="font-theme-title text-[22px] font-black leading-tight">Cine y series</h2>
-            <p className="text-xs font-bold text-white/85 mt-1" role="status">
-              {counts.cartelera} en cartelera · {counts.series} series · {counts.movies} pelis
-              {tuned ? ' · afinado a ti' : ''}
-            </p>
-          </div>
-          <button
-            onClick={handleSync}
-            disabled={isSyncing}
-            aria-label="Sincronizar"
-              className="w-11 h-11 flex items-center justify-center rounded-full bg-white text-conn-tealDark active:scale-95 transition-all disabled:opacity-60 flex-shrink-0"
-            >
-              <SyncGlyph size={22} spin={isSyncing} />
-            </button>
-        </div>
-        <div className="flex items-center gap-1.5 mt-3" role="group" aria-label="Sección de cine">
-          {SUBS.map((s) => (
-            <button
-              key={s.value}
-              type="button"
-              onClick={() => { setSub(s.value); setShowDiscarded(false); setFilterMode('all'); }}
-              aria-pressed={sub === s.value}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-black min-h-[36px] transition-all ${
-                sub === s.value ? 'bg-white text-conn-deep' : 'bg-white/20 text-white'
-              }`}
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-1.5 mt-1.5" role="group" aria-label="Filtrar por interés">
-          {FILTER_MODES.map((m) => (
-            <button
-              key={m.value}
-              type="button"
-              onClick={() => { setFilterMode(m.value); setShowDiscarded(false); }}
-              aria-pressed={filterMode === m.value && !showDiscarded}
-              className={`px-3 py-1 rounded-full text-[11px] font-black min-h-[32px] transition-all ${
-                filterMode === m.value && !showDiscarded ? 'bg-conn-amberSoft text-conn-deep' : 'bg-white/20 text-white'
-              }`}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <TabHero
+        title="Cine y series"
+        status={`${counts.cartelera} en cartelera · ${counts.series} series · ${counts.movies} pelis${tuned ? ' · afinado a ti' : ''}`}
+        onSync={handleSync}
+        isSyncing={isSyncing}
+      />
 
-      {discarded.length > 0 && (
-        <button onClick={() => setShowDiscarded(!showDiscarded)} type="button"
-          className="w-full text-center text-xs font-bold text-conn-muted min-h-[36px]">
-          {showDiscarded ? "Ver activos" : `Ver papelera (${discarded.length})`}
-        </button>
-      )}
+      {/* Botonera fuera del hero: mismo patrón que Planes y Comer */}
+      <ControlsCard>
+        <PillGroup
+          label="Sección de cine"
+          options={SUBS}
+          value={sub}
+          onChange={(v) => { setSub(v); setShowDiscarded(false); setFilterMode('all'); }}
+        />
+        <PillGroup
+          label="Filtrar por interés"
+          options={FILTER_MODES}
+          value={showDiscarded ? '' : filterMode}
+          onChange={(v) => { setFilterMode(v); setShowDiscarded(false); }}
+        />
+        {discarded.length > 0 && (
+          <button onClick={() => setShowDiscarded(!showDiscarded)} type="button"
+            className="w-full text-center text-xs font-bold text-conn-muted min-h-[36px]">
+            {showDiscarded ? "Ver activos" : `Ver papelera (${discarded.length})`}
+          </button>
+        )}
+      </ControlsCard>
 
       {toast && (
         <div role="status" aria-live="polite" className="bg-conn-deep text-white text-xs px-4 py-2 rounded-full flex items-center gap-2 shadow-lg animate-fadeIn mx-1">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { FBadge, FGlyph, SyncGlyph } from "../illustrations/NotoBadges";
+import { FBadge, FGlyph } from "../illustrations/NotoBadges";
+import { TabHero, ControlsCard, PillGroup } from "../ui/TabChrome";
 import { db, getVisibleRecos, getSeenFavoriteRecos, getRepescaReco, toggleRecoInterest, feedbackReco, restoreReco, markRecoSeenFavorite } from "../../db";
 import { getTasteProfile } from "../../services/recoService";
 import { syncPlansFromCloud } from "../../services/feedService";
@@ -134,49 +135,32 @@ export default function ComerTab() {
 
   return (
     <div className="space-y-3 pb-28 pt-1">
-      <div className="conn-hero px-5 pt-5 pb-4 text-white">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <h2 className="font-theme-title text-[22px] font-black leading-tight">Comer</h2>
-            <p className="text-xs font-bold text-white/85 mt-1" role="status">
-              {places.length} sitios en Sevilla y alrededores{tuned ? ' · afinado a ti' : ''}
-            </p>
-          </div>
-          <button
-            onClick={handleSync}
-            disabled={isSyncing}
-            aria-label="Sincronizar"
-              className="w-11 h-11 flex items-center justify-center rounded-full bg-white text-conn-tealDark active:scale-95 transition-all disabled:opacity-60 flex-shrink-0"
-            >
-              <SyncGlyph size={22} spin={isSyncing} />
-            </button>
-        </div>
+      <TabHero
+        title="Comer"
+        status={`${places.length} sitios en Sevilla y alrededores${tuned ? ' · afinado a ti' : ''}`}
+        onSync={handleSync}
+        isSyncing={isSyncing}
+      >
         <p className="text-[11px] font-bold text-white/80 mt-2">
           10 sitios por semana · con cocina, precio y plato famoso
         </p>
-        <div className="flex items-center gap-1.5 mt-2.5" role="group" aria-label="Filtrar por interés">
-          {FILTER_MODES.map((m) => (
-            <button
-              key={m.value}
-              type="button"
-              onClick={() => { setFilterMode(m.value); setShowDiscarded(false); }}
-              aria-pressed={filterMode === m.value && !showDiscarded}
-              className={`px-3 py-1 rounded-full text-[11px] font-black min-h-[32px] transition-all ${
-                filterMode === m.value && !showDiscarded ? 'bg-conn-amberSoft text-conn-deep' : 'bg-white/20 text-white'
-              }`}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      </TabHero>
 
-      {discarded.length > 0 && (
-        <button onClick={() => setShowDiscarded(!showDiscarded)} type="button"
-          className="w-full text-center text-xs font-bold text-conn-muted min-h-[36px]">
-          {showDiscarded ? "Ver activos" : `Ver papelera (${discarded.length})`}
-        </button>
-      )}
+      {/* Botonera fuera del hero: mismo patrón que Planes y Cine */}
+      <ControlsCard>
+        <PillGroup
+          label="Filtrar por interés"
+          options={FILTER_MODES}
+          value={showDiscarded ? '' : filterMode}
+          onChange={(v) => { setFilterMode(v); setShowDiscarded(false); }}
+        />
+        {discarded.length > 0 && (
+          <button onClick={() => setShowDiscarded(!showDiscarded)} type="button"
+            className="w-full text-center text-xs font-bold text-conn-muted min-h-[36px]">
+            {showDiscarded ? "Ver activos" : `Ver papelera (${discarded.length})`}
+          </button>
+        )}
+      </ControlsCard>
 
       {toast && (
         <div role="status" aria-live="polite" className="bg-conn-deep text-white text-xs px-4 py-2 rounded-full flex items-center gap-2 shadow-lg animate-fadeIn mx-1">
@@ -249,16 +233,18 @@ export default function ComerTab() {
                     onClick={(e) => onSeen(e, place)}
                     type="button"
                     aria-label={`Ya fui a ${place.title}`}
-                    className="px-3 py-2 rounded-full text-xs font-black bg-conn-mist text-conn-tealDark min-h-[44px] transition-all active:scale-95"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-black bg-conn-mist text-conn-tealDark min-h-[44px] transition-all active:scale-95"
                   >
-                    Ya fui ✓
+                    <FGlyph name="check" size={16} />
+                    Ya fui
                   </button>
                   <button
                     onClick={(e) => onFeedback(e, place)}
                     type="button"
                     aria-label={`No me gusta ${place.title}`}
-                    className="px-3 py-2 rounded-full text-xs font-bold text-conn-muted bg-conn-aqua hover:text-red-500 hover:bg-red-50 min-h-[44px] transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold text-conn-muted bg-conn-aqua hover:text-red-500 hover:bg-red-50 min-h-[44px] transition-colors"
                   >
+                    <FGlyph name="x" size={16} />
                     No me gusta
                   </button>
                 </div>

@@ -32,7 +32,7 @@ export default function SeenChoiceDialog({ title, verb, onKeep, onDiscard, onClo
             onClick={onDiscard}
             className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-full text-xs font-bold text-conn-muted bg-conn-aqua hover:text-red-500 hover:bg-red-50 transition-colors min-h-[44px]"
           >
-            <FGlyph name="x" size={16} />
+            <FGlyph name="papelera" size={16} />
             Papelera
           </button>
           <button
