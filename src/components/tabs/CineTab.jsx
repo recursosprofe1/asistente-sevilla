@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { FBadge, FGlyph, CategoryBadge } from "../illustrations/NotoBadges";
+import { FBadge, FGlyph, CategoryBadge, SyncGlyph } from "../illustrations/NotoBadges";
 import { db, getVisibleRecos, toggleRecoInterest, feedbackReco, restoreReco } from "../../db";
 import { getTasteProfile } from "../../services/recoService";
 import { syncPlansFromCloud } from "../../services/feedService";
@@ -289,12 +289,10 @@ export default function CineTab() {
             onClick={handleSync}
             disabled={isSyncing}
             aria-label="Sincronizar"
-            className="w-11 h-11 flex items-center justify-center rounded-full bg-white text-conn-tealDark active:scale-95 transition-all disabled:opacity-60 flex-shrink-0"
-          >
-            <span className={isSyncing ? "animate-spin inline-flex" : "inline-flex"}>
-              <FBadge name="sync" color="#0E7E8C" size={44} />
-            </span>
-          </button>
+              className="w-11 h-11 flex items-center justify-center rounded-full bg-white text-conn-tealDark active:scale-95 transition-all disabled:opacity-60 flex-shrink-0"
+            >
+              <SyncGlyph size={22} spin={isSyncing} />
+            </button>
         </div>
         <div className="flex items-center gap-1.5 mt-3" role="group" aria-label="Sección de cine">
           {SUBS.map((s) => (

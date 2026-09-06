@@ -29,6 +29,8 @@ const QUOTA_HUELVA_CADIZ = 10;
 const QUOTA_RUTAS = 5;
 const QUOTA_CATS = { 'Música': 5, 'Teatro y espectáculos': 5, 'Arte': 4, 'Gastronomía': 3 };
 const CATEGORIES_CLOSED = ['Rutas y naturaleza', 'Música', 'Teatro y espectáculos', 'Gastronomía', 'Arte', 'Varios', 'Cine'];
+// En Planes no hay pastilla Varios: la IA debe encajar todo en las otras.
+const CATEGORIES_PLANES = CATEGORIES_CLOSED.filter((c) => c !== 'Varios' && c !== 'Cine');
 
 // Excluidos siempre (doble barrera: prompt + filtro). Incluye flamenco por dirección.
 const EXCLUDED_RE = /deport|futbol|baloncesto|tenis|padel|maraton|media maraton|carrera popular|ciclismo|toros?|taurin|corrida|novillada|rejone|procesion|semana santa|misa|eucaristia|rosario|cofrad|via crucis|triduo|besamanos|flamenco|cante jondo|bailaor|cantaora|bienal de flamenco/i;
@@ -171,15 +173,20 @@ function stableId(p) {
   if (p.id) return String(p.id);
   return 'ev-' + slugify(p.title) + '-' + md5hex([p.sourceUrl || '', p.title || '', p.startsAt || '', p.venue || ''].join('|')).slice(0, 8);
 }
-function normCat(c) {
-  const t = String(c || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  if (/ruta|sender|naturaleza|sierra|parque|excurs|trekking|paseo verde|via verde|embalse|marisma|playa|costa/.test(t)) return 'Rutas y naturaleza';
-  if (/musica|concierto|opera|jazz/.test(t)) return 'Música';
-  if (/teatro|danza|escena|espectaculo|circo|monologo|comedia|magia|musical/.test(t)) return 'Teatro y espectáculos';
-  if (/gastronom|gastro|mercado|restaurante|tapas|cocina|vino|queso/.test(t)) return 'Gastronomía';
-  if (/arte|exposici|museo|pintura|fotografia|escultura|galeria|patrimonio|contemporaneo/.test(t)) return 'Arte';
-  if (/cine|pelicula|cartelera/.test(t)) return 'Cine';
-  return 'Varios';
+function normCat(c, hint = '') {
+  // En Planes no hay pastilla Varios: todo cae en alguna de las otras.
+  // 1ª pasada por la etiqueta de la IA, 2ª por título+resumen, si no: Arte.
+  const clean = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const byText = (t) => {
+    if (/ruta|sender|naturaleza|sierra|parque|excurs|trekking|paseo verde|via verde|embalse|marisma|playa|costa/.test(t)) return 'Rutas y naturaleza';
+    if (/musica|concierto|opera|jazz/.test(t)) return 'Música';
+    if (/teatro|danza|escena|espectaculo|circo|monologo|comedia|magia|musical/.test(t)) return 'Teatro y espectáculos';
+    if (/gastronom|gastro|mercado|restaurante|tapas|cocina|vino|queso/.test(t)) return 'Gastronomía';
+    if (/arte|exposici|museo|pintura|fotografia|escultura|galeria|patrimonio|contemporaneo|artesania|alfareria|ceramica|taller|tradicion|forja|canteria|esparto/.test(t)) return 'Arte';
+    if (/cine|pelicula|cartelera/.test(t)) return 'Cine';
+    return '';
+  };
+  return byText(clean(c)) || byText(clean(hint)) || 'Arte';
 }
 function noAccents(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
 // Provincia por municipio (la cocina exige municipios reales; el filtro por
@@ -375,7 +382,7 @@ async function fullRun() {
     '  "venue": "string (lugar concreto)", "municipality": "string (municipio real: Sevilla, Huelva, Cádiz, pueblo o paraje)",',
     '  "travelMinutes": 15 si Sevilla capital, 35 si provincia Sevilla, 80 si Huelva/Cádiz, 60 si ruta,',
     '  "priceText": "string (precio o \'Consultar\'/\'Gratis\' si lo sabes, nunca inventar)",',
-    '  "categories": ["una de: ' + CATEGORIES_CLOSED.join(' | ') + '"],',
+    '  "categories": ["una de: ' + CATEGORIES_PLANES.join(' | ') + '"],',
     '  "whyMatch": "string (1 frase + al final \'Reserva previa\' si exige reserva/entradas)",',
     '  "sourceUrl": "https://… (obligatorio, usa las URLs del contexto cuando encajen, no inventes enlaces)",',
     '  "sourceName": "string (nombre de la fuente)"',
@@ -386,6 +393,7 @@ async function fullRun() {
     'Dentro de los 25 con fecha, equilibra: mínimo 5 Música, 5 Teatro y espectáculos, 4 Arte, 3 Gastronomía.',
     'Antes de responder, CUENTA tu lista: si alguna cuota no llega al mínimo, añade más planes de esa zona/tipo hasta cumplirlo. Es obligatorio.',
     'PROHIBIDO: deporte, toros/tauro/corrida, actos religiosos (procesión, misa, cofradía) y flamenco.',
+    'Clasifica cada plan en una de esas categorías (nunca "Varios"): artesanía, alfarería, cerámica, talleres, tradición y patrimonio van en "Arte".',
     'NO incluyas cine (va aparte). Solo eventos futuros (salvo rutas). Sin inventar precios ni horarios.',
     'CANDIDATOS REALES de las fuentes (úsalos como base, no inventes):',
     context || '(sin contexto: trabaja con tu conocimiento, pero con URLs https reales)',
@@ -399,13 +407,13 @@ async function fullRun() {
     .filter((p) => {
       if (!p || !p.title || !p.sourceUrl || !/^https:\/\//i.test(p.sourceUrl)) return false;
       if (isExcluded(p.title, p.summary)) return false;
-      const cat0 = normCat((p.categories && p.categories[0]) || '');
+      const cat0 = normCat((p.categories && p.categories[0]) || '', (p.title || '') + ' ' + (p.summary || ''));
       if (cat0 !== 'Rutas y naturaleza' && !p.startsAt) return false;
       return true;
     })
     .map((p) => {
       const cats = (Array.isArray(p.categories) && p.categories.length ? p.categories : ['Varios'])
-        .map(normCat).filter((c) => CATEGORIES_CLOSED.includes(c) && c !== 'Cine');
+        .map((c) => normCat(c, (p.title || '') + ' ' + (p.summary || ''))).filter((c) => CATEGORIES_CLOSED.includes(c) && c !== 'Cine');
       const isRuta = cats[0] === 'Rutas y naturaleza';
       const withId = {
         ...p, id: stableId(p), categories: cats.length ? cats : ['Varios'],
@@ -420,7 +428,7 @@ async function fullRun() {
   let nSevilla = 0, nHC = 0, nRutas = 0;
   const counts = {};
   for (const p of planes) {
-    const cat = normCat(p.categories[0]);
+    const cat = normCat(p.categories[0], (p.title || '') + ' ' + (p.summary || ''));
     counts[cat] = (counts[cat] || 0) + 1;
     if (cat === 'Rutas y naturaleza') { nRutas++; continue; }
     const z = zoneOf(p.municipality || '');

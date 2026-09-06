@@ -165,5 +165,6 @@ export async function restorePlanRepo(id) {
 
 export function withNormalizedCategory(plan) {
   const raw = plan.categories ?? plan.category ?? 'Varios';
-  return normalizeCategory(raw);
+  const hint = [plan.title, plan.summary, plan.longDescription, plan.venue].filter(Boolean).join(' ');
+  return normalizeCategory(raw, hint);
 }

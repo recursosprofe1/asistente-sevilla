@@ -133,6 +133,24 @@ export function FBadge({ name, color, size = 52 }) {
   );
 }
 
+/** Icono de sincronizar 100 % circular (trazo fino, sin fondo).
+ *  El glifo Noto de sync dibuja flechas gruesas que se leen como un
+ *  cuadrado: para el botón de actualizar se usa este trazo en su lugar. */
+export function SyncGlyph({ size = 22, color = "#0E7E8C", spin = false }) {
+  const s = Number(size) || 22;
+  return (
+    <svg
+      width={s} height={s} viewBox="0 0 24 24" fill="none"
+      stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"
+      className={spin ? "animate-spin flex-shrink-0" : "flex-shrink-0"}
+      aria-hidden="true"
+    >
+      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+      <path d="M21 3v6h-6" />
+    </svg>
+  );
+}
+
 /** Insignia de categoría (color propio). */
 export function CategoryBadge({ category, size = 52 }) {
   const key = CATEGORY_GLYPH[category] || 'varios';

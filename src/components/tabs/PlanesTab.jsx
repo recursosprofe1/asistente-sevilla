@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { FBadge, FGlyph, CategoryBadge } from "../illustrations/NotoBadges";
+import { FBadge, FGlyph, CategoryBadge, SyncGlyph } from "../illustrations/NotoBadges";
 import { db, discardPlan, restorePlan, getFeedMeta } from "../../db";
 import { syncPlansFromCloud } from "../../services/feedService";
 import {
@@ -459,9 +459,7 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
               className="w-11 h-11 flex items-center justify-center rounded-full bg-white text-conn-tealDark active:scale-95 transition-all disabled:opacity-60"
               style={{ boxShadow: '0 8px 18px -6px rgba(0, 0, 0, 0.30)' }}
             >
-              <span className={isSyncing ? "animate-spin inline-flex" : "inline-flex"}>
-                <FBadge name="sync" color="#0E7E8C" size={44} />
-              </span>
+              <SyncGlyph size={22} spin={isSyncing} />
             </button>
           </div>
         </div>

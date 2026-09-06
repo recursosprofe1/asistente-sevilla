@@ -171,7 +171,7 @@ function toExpiresAt(p, now = Date.now()) {
 
 function normalizePlan(p, now) {
   const categoriesRaw = p.categories ?? p.category ?? 'Varios';
-  const canonical = normalizeCategory(categoriesRaw);
+  const canonical = normalizeCategory(categoriesRaw, [p.title, p.summary, p.longDescription, p.venue].filter(Boolean).join(' '));
   const isRuta = canonical === 'Rutas y naturaleza';
   return {
     id: stablePlanId(p),

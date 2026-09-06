@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { FBadge, FGlyph } from "../illustrations/NotoBadges";
+import { FBadge, FGlyph, SyncGlyph } from "../illustrations/NotoBadges";
 import { db, getVisibleRecos, toggleRecoInterest, feedbackReco, restoreReco } from "../../db";
 import { getTasteProfile } from "../../services/recoService";
 import { syncPlansFromCloud } from "../../services/feedService";
@@ -119,12 +119,10 @@ export default function ComerTab() {
             onClick={handleSync}
             disabled={isSyncing}
             aria-label="Sincronizar"
-            className="w-11 h-11 flex items-center justify-center rounded-full bg-white text-conn-tealDark active:scale-95 transition-all disabled:opacity-60 flex-shrink-0"
-          >
-            <span className={isSyncing ? "animate-spin inline-flex" : "inline-flex"}>
-              <FBadge name="sync" color="#0E7E8C" size={44} />
-            </span>
-          </button>
+              className="w-11 h-11 flex items-center justify-center rounded-full bg-white text-conn-tealDark active:scale-95 transition-all disabled:opacity-60 flex-shrink-0"
+            >
+              <SyncGlyph size={22} spin={isSyncing} />
+            </button>
         </div>
         <p className="text-[11px] font-bold text-white/80 mt-2">
           10 sitios por semana · con cocina, precio y plato famoso
