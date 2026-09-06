@@ -540,10 +540,10 @@ async function fullRun() {
     const seen = new Set(titlesOf(main));
     const out = [...main];
     for (const it of extra) {
+      if (out.length >= cap) break;
       const key = String(it.title || '').toLowerCase().trim();
       if (!key || seen.has(key)) continue;
       seen.add(key); out.push(it);
-      if (out.length >= cap) break;
     }
     return out;
   };
