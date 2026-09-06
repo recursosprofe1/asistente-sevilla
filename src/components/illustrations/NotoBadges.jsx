@@ -20,6 +20,8 @@ const MAP = {
   gastro:     { code: '1f374', color: '#E07040' },
   arte:       { code: '1f3a8', color: '#D4860A' },
   cine:       { code: '1f3ac', color: '#4A6FCC' },
+  tv:         { code: '1f4fa', color: '#4A6FCC' },
+  cinta:      { code: '1f39e', color: '#4A6FCC' },
   varios:     { code: '1f9ed', color: '#12A5B5' },
   sol:        { code: '2600', color: '#F5A623' },
   brujula:    { code: '1f9ed', color: '#0B3B42' },
@@ -162,6 +164,17 @@ export function CategoryBadge({ category, size = 52 }) {
 export function NavBadge({ tab, size = 44 }) {
   const key = NAV_STYLE[tab] || 'brujula';
   return <FBadge name={key} color={NAV_COLOR[tab] || '#0E7E8C'} size={size} />;
+}
+
+// Badge para recomendaciones: cada familia con su glifo reconocible.
+const RECO_BADGE = {
+  series: { glyph: 'tv', color: '#4A6FCC' },
+  movies: { glyph: 'cinta', color: '#4A6FCC' },
+  places: { glyph: 'gastro', color: '#E07040' }
+};
+export function RecoBadge({ kind, size = 44 }) {
+  const b = RECO_BADGE[kind] || { glyph: 'varios', color: '#12A5B5' };
+  return <FBadge name={b.glyph} color={b.color} size={size} />;
 }
 
 /** Glifo suelto (sin disco) para interiores ya coloreados. */

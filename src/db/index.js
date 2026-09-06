@@ -477,6 +477,31 @@ export async function initializeDatabase() {
 // PLANES: las mutaciones (favorito / Hoy / papelera) viven en
 // src/services/planRepository.js. Aquí solo limpieza y utilidades de bajo nivel.
 
+// Borra TODO lo que la app sabe de ti (favoritos, vistas, descartes, Hoy)
+// dejando intacto el contenido del feed. La app vuelve a no conocerte.
+export async function resetLearning() {
+  let touched = 0;
+  const clean = {
+    userStatus: 'new', status: 'available',
+    interestedAt: null, discardedAt: null, discardReason: null,
+    seenAt: null, isForToday: false, todaySelectionDate: null
+  };
+  const hasSignal = (r) => r.userStatus === 'interested' || r.userStatus === 'discarded'
+    || r.interestedAt || r.discardedAt || r.seenAt || r.isForToday;
+  try {
+    const planIds = (await db.plans.toArray()).filter(hasSignal).map((p) => p.id);
+    if (planIds.length) { await db.plans.where('id').anyOf(planIds).modify(clean); touched += planIds.length; }
+    for (const table of RECO_TABLES) {
+      const ids = (await db.table(table).toArray()).filter(hasSignal).map((r) => r.id);
+      if (ids.length) { await db.table(table).where('id').anyOf(ids).modify(clean); touched += ids.length; }
+    }
+  } catch (e) {
+    console.error('resetLearning falló:', e);
+    throw e;
+  }
+  return touched;
+}
+
 // Limpia selecciones de Hoy de días anteriores (renovación diaria): marca
 // isForToday=false cuando todaySelectionDate ya no es hoy. Devuelve cuántos.
 export async function clearStaleTodayFlags(now = new Date()) {

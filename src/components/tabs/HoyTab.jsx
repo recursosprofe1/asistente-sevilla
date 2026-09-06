@@ -122,8 +122,10 @@ export default function HoyTab({ onNavigateTab }) {
     load();
     const onVisible = () => { if (document.visibilityState === 'visible') load(); };
     document.addEventListener('visibilitychange', onVisible);
+    document.addEventListener('ajustes:changed', onVisible);
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
+      document.removeEventListener('ajustes:changed', onVisible);
       if (toastTimer.current) clearTimeout(toastTimer.current);
     };
   }, []);

@@ -6,7 +6,7 @@ const browserGlobals = {
   AbortController: 'readonly', setTimeout: 'readonly', clearTimeout: 'readonly',
   setInterval: 'readonly', clearInterval: 'readonly', Intl: 'readonly', URL: 'readonly',
   localStorage: 'readonly', navigator: 'readonly', TextEncoder: 'readonly',
-  btoa: 'readonly', atob: 'readonly', Uint8Array: 'readonly'
+  btoa: 'readonly', atob: 'readonly', Uint8Array: 'readonly', Event: 'readonly'
 };
 
 export default [

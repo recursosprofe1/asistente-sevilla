@@ -2,13 +2,14 @@ import React from 'react';
 import { FGlyph, SyncGlyph } from '../illustrations/NotoBadges';
 
 // ═══════════════════════════════════════════════════════════════
-// TabChrome — patrón común de las pestañas (Hoy aparte, es special).
-// Reglas de diseño pactadas:
+//  TabChrome — patrón común de las pestañas (Hoy aparte, es special).
+//  Reglas de diseño pactadas:
 //  · Hero teal SOLO con título, línea de estado y botón de sync
-//    (mismo tamaño/posición en todas). Acciones extra van en `right`.
-//  · Toda botonera va DEBAJO del hero, en tarjeta blanca: secciones como
-//    pastillas con glifo+texto (SectionPill) y filtros como toggles
-//    circulares de puro icono (IconToggle), mismo lenguaje en las tres.
+//    (mismo tamaño/posición en todas).
+//  · Toda botonera va DEBAJO del hero, en tarjeta blanca: empieza con
+//    una frase y a la derecha el trío papelera/lupa/corazón
+//    (ControlsHeader, un solo estado 'view' en las tres pestañas).
+//  · Secciones (Cine) como pastillas con glifo+texto (SectionPill).
 // ═══════════════════════════════════════════════════════════════
 
 export function TabHero({ title, status, onSync, isSyncing, right, children }) {
@@ -68,7 +69,7 @@ export function SectionPill({ icon, label, active, onClick }) {
   );
 }
 
-// Toggle circular de puro icono (lupa/corazón): anillo cuando está activo.
+// Toggle circular de puro icono (papelera/lupa/corazón): anillo cuando está activo.
 export function IconToggle({ icon, label, active, onClick }) {
   return (
     <button
@@ -87,20 +88,33 @@ export function IconToggle({ icon, label, active, onClick }) {
   );
 }
 
-// Botón redondo menor (papelera y compañía) con el mismo lenguaje que el sync.
-export function RoundIconButton({ icon, iconSize = 18, label, onClick, danger = false }) {
+// Cabecera común de la caja de control: frase a la izquierda y el trío
+// papelera/lupa/corazón a la derecha. `view` es un único estado:
+// 'trash' | 'all' | 'favorites' (las tres pestañas, misma semántica).
+export function ControlsHeader({ question, view, onView, trashCount = 0 }) {
   return (
-    <button
-      onClick={onClick}
-      type="button"
-      title={label}
-      aria-label={label}
-      className={`w-11 h-11 flex items-center justify-center rounded-full active:scale-95 transition-all ${
-        danger ? 'bg-white/20 text-white' : 'bg-white text-conn-tealDark'
-      }`}
-      style={{ boxShadow: '0 8px 18px -6px rgba(0, 0, 0, 0.30)' }}
-    >
-      <FGlyph name={icon} size={iconSize} color={danger ? '#FFFFFF' : '#0E7E8C'} />
-    </button>
+    <div className="flex items-center justify-between gap-2">
+      <p className="text-xs font-bold text-conn-muted leading-relaxed">{question}</p>
+      <div className="flex items-center gap-1.5 flex-shrink-0" role="group" aria-label="Vista">
+        <IconToggle
+          icon="papelera"
+          label={trashCount > 0 ? `Papelera (${trashCount})` : 'Papelera (vacía)'}
+          active={view === 'trash'}
+          onClick={() => onView('trash')}
+        />
+        <IconToggle
+          icon="lupa"
+          label="Todos"
+          active={view === 'all'}
+          onClick={() => onView('all')}
+        />
+        <IconToggle
+          icon="corazon"
+          label="Favoritos"
+          active={view === 'favorites'}
+          onClick={() => onView('favorites')}
+        />
+      </div>
+    </div>
   );
 }

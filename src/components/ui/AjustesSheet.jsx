@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FGlyph } from '../illustrations/NotoBadges';
-import { db } from '../../db';
+import { db, resetLearning } from '../../db';
 import { getTasteProfile } from '../../services/recoService';
 import { quizáSubirPerfil } from '../../services/profileSync';
 
@@ -75,6 +75,42 @@ export default function AjustesSheet({ open, onClose }) {
     setHasToken(false);
     setMsg('Token borrado: la app deja de subir nada (el aprendizaje local sigue igual)');
     load();
+  };
+
+  const avisarTabs = () => document.dispatchEvent(new Event('ajustes:changed'));
+
+  const borrarAprendizaje = async () => {
+    if (!window.confirm('¿Empezar de cero? Se borran TODOS tus corazones, "Vista/Ya fui", descartes y selecciones de Hoy (planes, series, pelis y sitios). El contenido del feed no se toca.')) return;
+    if (!window.confirm('Última confirmación: no se puede deshacer.')) return;
+    const n = await resetLearning();
+    setMsg(`Listo: ${n} elementos vuelven a estar vírgenes. La app ya no sabe nada de tus gustos.`);
+    avisarTabs();
+    load();
+  };
+
+  const borrarCacheRemota = async () => {
+    if (!window.confirm('¿Borrar la caché remota? Se conservan tus favoritos, tu selección de Hoy y la papelera.')) return;
+    const all = await db.plans.toArray();
+    const removable = all
+      .filter((p) => {
+        const fav = p.userStatus === 'interested' || p.status === 'interested';
+        const inToday = p.isForToday === true;
+        const inTrash = p.userStatus === 'discarded' || p.status === 'discarded';
+        return !fav && !inToday && !inTrash && (p.userStatus === 'new' || !p.userStatus);
+      })
+      .map((p) => p.id);
+    if (removable.length > 0) await db.plans.bulkDelete(removable);
+    setMsg(`Caché borrada (${removable.length} planes). Favoritos, Hoy y papelera intactos.`);
+    avisarTabs();
+  };
+
+  const resetPlanes = async () => {
+    if (!window.confirm('ZONA DE PRUEBAS: ¿borrar TODOS los planes (incluidos favoritos y Hoy)? Las recos no se tocan.')) return;
+    if (!window.confirm('Confirma de nuevo: esta acción no se puede deshacer.')) return;
+    await db.plans.clear();
+    try { await db.table('feedMeta').delete('plans'); } catch { /* instalaciones antiguas sin tabla: ignorar */ }
+    setMsg('Base de planes vacía. Sincroniza para volver a llenarla.');
+    avisarTabs();
   };
 
   const haceUnEnvio = meta?.lastAt
@@ -154,6 +190,24 @@ export default function AjustesSheet({ open, onClose }) {
             </button>
           )}
           {msg && <p className="text-[11px] font-bold text-conn-deep" role="status">{msg}</p>}
+        </section>
+
+        <section className="space-y-2 border-t border-conn-aqua pt-3">
+          <p className="text-xs font-black text-conn-deep">Zona de pruebas</p>
+          <div className="flex flex-col gap-1.5">
+            <button type="button" onClick={borrarAprendizaje}
+              className="w-full text-left px-4 py-2.5 rounded-full text-[11px] font-black bg-conn-deep text-white active:scale-[0.98] min-h-[44px]">
+              Empezar de cero · borrar lo aprendido (recomendado tras tus pruebas)
+            </button>
+            <button type="button" onClick={borrarCacheRemota}
+              className="w-full text-left px-4 py-2.5 rounded-full text-[11px] font-bold bg-conn-aqua text-conn-muted hover:text-red-500 active:scale-[0.98] min-h-[44px]">
+              Borrar caché remota (conserva favoritos, Hoy y papelera)
+            </button>
+            <button type="button" onClick={resetPlanes}
+              className="w-full text-left px-4 py-2.5 rounded-full text-[11px] font-bold bg-conn-aqua text-conn-muted hover:text-red-500 active:scale-[0.98] min-h-[44px]">
+              Reset total de planes (borra todos, incluidos favoritos y Hoy)
+            </button>
+          </div>
         </section>
       </div>
     </div>

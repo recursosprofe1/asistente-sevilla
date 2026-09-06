@@ -1,17 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
-import { FBadge, FGlyph } from "../illustrations/NotoBadges";
-import { TabHero, ControlsCard, IconToggle } from "../ui/TabChrome";
+import { FBadge, FGlyph, RecoBadge } from "../illustrations/NotoBadges";
+import { TabHero, ControlsCard, ControlsHeader } from "../ui/TabChrome";
 import { db, getVisibleRecos, getSeenFavoriteRecos, getRepescaReco, toggleRecoInterest, feedbackReco, restoreReco, markRecoSeenFavorite } from "../../db";
 import { getTasteProfile } from "../../services/recoService";
 import { syncPlansFromCloud } from "../../services/feedService";
 import { quizáSubirPerfil } from "../../services/profileSync";
 import { PlanWhy, PlanSourceLink } from "../plans/shared";
 import SeenChoiceDialog from "../reco/SeenChoiceDialog";
-
-const FILTER_MODES = [
-  { value: 'all', label: 'Todos', icon: 'lupa' },
-  { value: 'favorites', label: 'Favoritos', icon: 'corazon' },
-];
 
 const isFavPlace = (p) => p.userStatus === "interested" || p.status === "interested";
 
@@ -35,9 +30,11 @@ export default function ComerTab() {
   const [places, setPlaces] = useState([]);
   const [seenPlaces, setSeenPlaces] = useState([]);
   const [seenFor, setSeenFor] = useState(null);
-  const [filterMode, setFilterMode] = useState('all');
+  // Vista única compartida con Planes/Cine: 'all' | 'favorites' | 'trash'.
+  const [view, setView] = useState('all');
+  const showDiscarded = view === 'trash';
+  const filterMode = view === 'favorites' ? 'favorites' : 'all';
   const [discarded, setDiscarded] = useState([]);
-  const [showDiscarded, setShowDiscarded] = useState(false);
   const [toast, setToast] = useState("");
   const [expandedId, setExpandedId] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -65,8 +62,10 @@ export default function ComerTab() {
     load();
     const onVisible = () => { if (document.visibilityState === 'visible') load(); };
     document.addEventListener('visibilitychange', onVisible);
+    document.addEventListener('ajustes:changed', onVisible);
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
+      document.removeEventListener('ajustes:changed', onVisible);
       if (toastTimer.current) clearTimeout(toastTimer.current);
     };
   }, []);
@@ -148,25 +147,14 @@ export default function ComerTab() {
         </p>
       </TabHero>
 
-      {/* Botonera fuera del hero: mismo patrón que Planes y Cine */}
+      {/* Caja de control: frase + trío papelera/lupa/corazón */}
       <ControlsCard>
-        <div className="flex items-center justify-end gap-1.5" role="group" aria-label="Filtrar por interés">
-          {FILTER_MODES.map((m) => (
-            <IconToggle
-              key={m.value}
-              icon={m.icon}
-              label={m.label}
-              active={!showDiscarded && filterMode === m.value}
-              onClick={() => { setFilterMode(m.value); setShowDiscarded(false); }}
-            />
-          ))}
-        </div>
-        {discarded.length > 0 && (
-          <button onClick={() => setShowDiscarded(!showDiscarded)} type="button"
-            className="w-full text-center text-xs font-bold text-conn-muted min-h-[36px]">
-            {showDiscarded ? "Ver activos" : `Ver papelera (${discarded.length})`}
-          </button>
-        )}
+        <ControlsHeader
+          question="¿Dónde te apetece comer hoy?"
+          view={view}
+          onView={(v) => { setView(v); setExpandedId(null); }}
+          trashCount={discarded.length}
+        />
       </ControlsCard>
 
       {toast && (
@@ -189,7 +177,7 @@ export default function ComerTab() {
                 className="w-full text-left focus-visible:outline-2 focus-visible:outline-conn-tealDark"
               >
                 <div className="flex items-center gap-3 p-4">
-                  <FBadge name="gastro" color="#E07040" size={44} />
+                  <RecoBadge kind="places" size={44} />
                   <div className="flex-1 min-w-0">
                     <h3 className="font-theme-title text-[15px] font-black text-conn-deep leading-snug line-clamp-2">
                       {place.title}
@@ -234,24 +222,24 @@ export default function ComerTab() {
                     aria-label={isInterested ? `Quitar ${place.title} de favoritos` : `Guardar ${place.title} en favoritos`}
                     className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-red-50 active:scale-90 transition-all"
                   >
-                    <FBadge name="corazon" color={isInterested ? "#E5484D" : "#CBD5E1"} size={40} />
+                    <FBadge name="corazon" color={isInterested ? "#E5484D" : "#CBD5E1"} size={28} />
                   </button>
                   <button
                     onClick={(e) => onSeen(e, place)}
                     type="button"
                     aria-label={`Ya fui a ${place.title}`}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-black bg-conn-mist text-conn-tealDark min-h-[44px] transition-all active:scale-95"
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-black bg-conn-mist text-conn-tealDark min-h-[36px] transition-all active:scale-95"
                   >
-                    <FGlyph name="check" size={16} />
+                    <FGlyph name="pin" size={15} />
                     Ya fui
                   </button>
                   <button
                     onClick={(e) => onFeedback(e, place)}
                     type="button"
                     aria-label={`No me gusta ${place.title}`}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold text-conn-muted bg-conn-aqua hover:text-red-500 hover:bg-red-50 min-h-[44px] transition-colors"
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-bold text-conn-muted bg-conn-aqua hover:text-red-500 hover:bg-red-50 min-h-[36px] transition-colors"
                   >
-                    <FGlyph name="x" size={16} />
+                    <FGlyph name="x" size={15} />
                     No me gusta
                   </button>
                 </div>
@@ -286,7 +274,7 @@ export default function ComerTab() {
 
         {list.length === 0 && (
           <div className="conn-card text-center py-12 px-6">
-            <FBadge name="gastro" color="#E07040" size={56} />
+            <RecoBadge kind="places" size={56} />
             <p className="font-theme-title text-[15px] font-black text-conn-deep mb-1 mt-3">
               {showDiscarded
                 ? "La papelera está vacía"
@@ -296,7 +284,7 @@ export default function ComerTab() {
             </p>
             <p className="text-xs font-semibold text-conn-muted">
               {showDiscarded
-                ? ""
+                ? "Los sitios que descartes con \"No me gusta\" se vetan para siempre."
                 : filterMode === 'favorites'
                   ? "Marca el corazón en un sitio para verlo aquí."
                   : "Sincroniza para traer los sitios de la semana."}

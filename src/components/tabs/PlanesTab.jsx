@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { FBadge, FGlyph, CategoryBadge } from "../illustrations/NotoBadges";
-import { TabHero, IconToggle, RoundIconButton } from "../ui/TabChrome";
+import { TabHero, ControlsHeader } from "../ui/TabChrome";
 import { db, getFeedMeta } from "../../db";
 import { syncPlansFromCloud } from "../../services/feedService";
 import { quizáSubirPerfil } from "../../services/profileSync";
@@ -27,11 +27,6 @@ export const TRAVEL_OPTIONS = [
   { value: 45, label: "45 min", sub: "Metro" },
   { value: 60, label: "1 hora", sub: "Provincia" },
   { value: UNLIMITED_TRAVEL, label: "Todo", sub: "Sin límite" }
-];
-
-const FILTER_MODES = [
-  { value: 'all', label: 'Todos', icon: 'lupa' },
-  { value: 'favorites', label: 'Favoritos', icon: 'corazon' }
 ];
 
 function diasRestantesEnPapelera(plan) {
@@ -151,21 +146,21 @@ export function PlanCard({
             aria-pressed={isInterested}
             className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-red-50 active:scale-90 transition-all"
           >
-            <FBadge name="corazon" color={isInterested ? "#E5484D" : "#CBD5E1"} size={40} />
+            <FBadge name="corazon" color={isInterested ? "#E5484D" : "#CBD5E1"} size={28} />
           </button>
           <button
             onClick={(e) => onToggleForToday(e, plan)}
             type="button"
             aria-label={isForToday ? `Quitar ${plan.title} de Hoy` : `Añadir ${plan.title} a Hoy`}
             aria-pressed={isForToday}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black transition-all active:scale-95 min-h-[44px] ${
+            className={`flex items-center gap-1 px-4 py-2 rounded-full text-xs font-black transition-all active:scale-95 min-h-[44px] ${
               isForToday
                 ? "bg-conn-amberSoft text-conn-deep"
                 : "bg-conn-mist text-conn-tealDark"
             }`}
           >
-            <FBadge name="calendario-add" color="#F5A623" size={22} />
-            {isForToday ? "En Hoy" : "Añadir a Hoy"}
+            <FBadge name="calendario-add" color="#F5A623" size={20} />
+            {isForToday ? "En Hoy" : "Hoy"}
           </button>
         </div>
       )}
@@ -246,8 +241,10 @@ export function shortCineName(venue) {
 export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
   const [plans, setPlans] = useState([]);
   const [discardedPlans, setDiscardedPlans] = useState([]);
-  const [showDiscarded, setShowDiscarded] = useState(false);
-  const [filterMode, setFilterMode] = useState('all');
+  // Vista única compartida por las tres pestañas: 'all' | 'favorites' | 'trash'.
+  const [view, setView] = useState('all');
+  const showDiscarded = view === 'trash';
+  const filterMode = view === 'favorites' ? 'favorites' : 'all';
   const [activeCategory, setActiveCategory] = useState('Todas');
   const [toast, setToast] = useState("");
   const [expandedId, setExpandedId] = useState(null);
@@ -289,8 +286,10 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
       loadPlansFromDb();
     };
     document.addEventListener('visibilitychange', onVisible);
+    document.addEventListener('ajustes:changed', onVisible);
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
+      document.removeEventListener('ajustes:changed', onVisible);
       if (toastTimer.current) clearTimeout(toastTimer.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -355,38 +354,6 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
       clearTimeout(timer);
       setIsSyncing(false);
     }
-  };
-
-  // Borra solo la caché remota: preserva favoritos, Hoy y papelera.
-  const handleClearRemoteCache = async () => {
-    if (!window.confirm("¿Borrar la caché remota? Se conservan tus favoritos, tu selección de Hoy y la papelera.")) return;
-    const all = await db.plans.toArray();
-    const removable = all
-      .filter((p) => {
-        const fav = p.userStatus === 'interested' || p.status === 'interested';
-        const inToday = p.isForToday === true;
-        const inTrash = p.userStatus === 'discarded' || p.status === 'discarded';
-        return !fav && !inToday && !inTrash && (p.userStatus === 'new' || !p.userStatus);
-      })
-      .map((p) => p.id);
-    if (removable.length > 0) await db.plans.bulkDelete(removable);
-    await loadPlansFromDb();
-    showToast(`Caché borrada (${removable.length}). Favoritos, Hoy y papelera intactos.`);
-  };
-
-  // Reset total solo para pruebas: borra TODO incluido favoritos y Hoy.
-  const handleResetAllForTesting = async () => {
-    if (!window.confirm("RESET DE PRUEBAS: ¿borrar TODOS los planes (incluidos favoritos y Hoy)?")) return;
-    if (!window.confirm("Confirma de nuevo: esta acción no se puede deshacer.")) return;
-    await db.plans.clear();
-    try {
-      await db.table('feedMeta').delete('plans');
-    } catch {
-      // Sin tabla en instalaciones antiguas: ignorar.
-    }
-    setShowPrevious(false);
-    await loadPlansFromDb(false);
-    showToast("Reset completo: base de planes vacía. Sincroniza para verificar.");
   };
 
   const handleDiscardPlan = async (e, id) => {
@@ -457,13 +424,6 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
           : `${sourceList.length} sugerencias cerca de ti`}
         onSync={handleSyncCloud}
         isSyncing={isSyncing}
-        right={
-          <RoundIconButton
-            icon="papelera"
-            label="Borrar caché remota, conserva favoritos, Hoy y papelera"
-            onClick={handleClearRemoteCache}
-          />
-        }
       >
         <FeedStatusLine lastSyncedAt={feedMeta?.lastSyncedAt} stale={feedStale} light />
         {feedStale && (
@@ -490,21 +450,8 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
 
       {/* Control de tiempo + filtros */}
       <div className="conn-card p-4">
-        <div className="flex items-center justify-between gap-2 mb-2.5">
-          <p className="text-xs font-bold text-conn-muted leading-relaxed">
-            ¿Hasta dónde viajas hoy?
-          </p>
-          <div className="flex items-center gap-1.5" role="group" aria-label="Filtrar planes">
-            {FILTER_MODES.map((m) => (
-              <IconToggle
-                key={m.value}
-                icon={m.icon}
-                label={m.label}
-                active={!showDiscarded && filterMode === m.value}
-                onClick={() => { setFilterMode(m.value); setShowDiscarded(false); }}
-              />
-            ))}
-          </div>
+        <div className="mb-2.5">
+          <ControlsHeader question="¿Hasta dónde viajas hoy?" view={view} onView={setView} trashCount={discardedPlans.length} />
         </div>
 
         <div className="grid grid-cols-4 gap-1.5" role="group" aria-label="Tiempo máximo de desplazamiento">
@@ -554,13 +501,6 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
           </div>
         )}
 
-        {discardedPlans.length > 0 && (
-          <button onClick={() => setShowDiscarded(!showDiscarded)} type="button"
-            className="mt-2.5 w-full text-center text-xs font-bold text-conn-muted min-h-[36px]">
-            {showDiscarded ? "Ver planes activos" : `Ver papelera (${discardedPlans.length})`}
-          </button>
-        )}
-
         {!showDiscarded && staleCount > 0 && (
           <button
             onClick={async () => {
@@ -575,15 +515,6 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
             {showPrevious ? "Ocultar anteriores" : `Anteriores retirados (${staleCount})`}
           </button>
         )}
-
-        <button
-          onClick={handleResetAllForTesting}
-          type="button"
-          aria-label="Reset total de pruebas, borra todos los planes"
-          className="mt-1 w-full text-center text-xs font-bold text-red-300 min-h-[36px]"
-        >
-          Reset total de pruebas (borra todo)
-        </button>
       </div>
 
       {/* Toast */}
@@ -616,7 +547,7 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
           </p>
           {!showDiscarded && (
             <div className="flex items-center justify-center gap-2">
-              <button onClick={() => { setActiveCategory('Todas'); setFilterMode('all'); handleTimeChange(UNLIMITED_TRAVEL); }}
+              <button onClick={() => { setActiveCategory('Todas'); setView('all'); handleTimeChange(UNLIMITED_TRAVEL); }}
                 type="button"
                 className="mt-2 px-5 py-2 rounded-full text-xs font-black bg-conn-teal text-white min-h-[44px]">
                 Ver todos

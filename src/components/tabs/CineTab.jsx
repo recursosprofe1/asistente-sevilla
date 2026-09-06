@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { FBadge, FGlyph, CategoryBadge } from "../illustrations/NotoBadges";
-import { TabHero, ControlsCard, SectionPill, IconToggle } from "../ui/TabChrome";
+import { FBadge, FGlyph, RecoBadge } from "../illustrations/NotoBadges";
+import { TabHero, ControlsCard, ControlsHeader, SectionPill } from "../ui/TabChrome";
 import { db, getVisibleRecos, getSeenFavoriteRecos, getRepescaReco, toggleRecoInterest, feedbackReco, restoreReco, toggleRecoForToday, markRecoSeenFavorite } from "../../db";
 import { getTasteProfile } from "../../services/recoService";
 import { syncPlansFromCloud } from "../../services/feedService";
@@ -14,9 +14,9 @@ import { PlanWhy, PlanSourceLink } from "../plans/shared";
 import { getTodayKeyMadrid } from "../../utils/time";
 
 const SUBS = [
-  { value: 'cartelera', label: 'Cartelera', icon: 'calendario' },
-  { value: 'series', label: 'Series', icon: 'capas' },
-  { value: 'movies', label: 'Películas', icon: 'cine' },
+  { value: 'cartelera', label: 'Cartelera', icon: 'cine' },   // claqueta
+  { value: 'series', label: 'Series', icon: 'tv' },           // televisor
+  { value: 'movies', label: 'Películas', icon: 'cinta' },     // rollo de cinta
 ];
 
 // Cines de una tarjeta de cartelera como pastillas cortas.
@@ -43,7 +43,7 @@ function scoreByProfile(item, profile, kind) {
   return score;
 }
 
-function RecoCard({ item, kindLabel, meta, onFav, onToggleToday, onSeen, onFeedback, onRestore, isExpanded, onToggle, discarded, todayKey }) {
+function RecoCard({ item, kind, meta, onFav, onToggleToday, onSeen, onFeedback, onRestore, isExpanded, onToggle, discarded, todayKey }) {
   const isInterested = item.userStatus === "interested" || item.status === "interested";
   const isForToday = item.isForToday === true && item.todaySelectionDate === todayKey;
   return (
@@ -55,7 +55,7 @@ function RecoCard({ item, kindLabel, meta, onFav, onToggleToday, onSeen, onFeedb
         className="w-full text-left focus-visible:outline-2 focus-visible:outline-conn-tealDark"
       >
         <div className="flex items-center gap-3 p-4">
-          <CategoryBadge category={kindLabel === 'Serie' ? 'Varios' : 'Cine'} size={44} />
+          <RecoBadge kind={kind} size={44} />
           <div className="flex-1 min-w-0">
             <h3 className="font-theme-title text-[15px] font-black text-conn-deep leading-snug line-clamp-2">
               {item.title}
@@ -93,7 +93,7 @@ function RecoCard({ item, kindLabel, meta, onFav, onToggleToday, onSeen, onFeedb
       </button>
 
       {!discarded && (
-          <div className="flex-1 flex items-center gap-1.5 flex-wrap">
+          <div className="flex-1 flex items-center gap-1.5 flex-wrap px-4 pb-3">
             <button
               onClick={(e) => onFav(e, item)}
               type="button"
@@ -101,7 +101,7 @@ function RecoCard({ item, kindLabel, meta, onFav, onToggleToday, onSeen, onFeedb
               aria-label={isInterested ? `Quitar ${item.title} de favoritos` : `Guardar ${item.title} en favoritos`}
               className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-red-50 active:scale-90 transition-all"
             >
-              <FBadge name="corazon" color={isInterested ? "#E5484D" : "#CBD5E1"} size={40} />
+              <FBadge name="corazon" color={isInterested ? "#E5484D" : "#CBD5E1"} size={28} />
             </button>
             <button
               onClick={(e) => onToggleToday(e, item)}
@@ -112,25 +112,25 @@ function RecoCard({ item, kindLabel, meta, onFav, onToggleToday, onSeen, onFeedb
                 isForToday ? 'bg-conn-amberSoft text-conn-deep' : 'bg-conn-mist text-conn-tealDark'
               }`}
             >
-              <FBadge name="calendario-add" color="#F5A623" size={22} />
-              {isForToday ? 'En Hoy' : 'Añadir a Hoy'}
+              <FBadge name="calendario-add" color="#F5A623" size={20} />
+              {isForToday ? 'En Hoy' : 'Hoy'}
             </button>
             <button
               onClick={(e) => onSeen(e, item)}
               type="button"
               aria-label={`Marcar ${item.title} como vista`}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-black bg-conn-mist text-conn-tealDark min-h-[44px] transition-all active:scale-95"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-black bg-conn-mist text-conn-tealDark min-h-[36px] transition-all active:scale-95"
             >
-              <FGlyph name="check" size={16} />
+              <FGlyph name="ojo" size={15} />
               Vista
             </button>
             <button
               onClick={(e) => onFeedback(e, item, 'disliked')}
               type="button"
               aria-label={`No me gusta ${item.title}`}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold text-conn-muted bg-conn-aqua hover:text-red-500 hover:bg-red-50 min-h-[44px] transition-colors"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-bold text-conn-muted bg-conn-aqua hover:text-red-500 hover:bg-red-50 min-h-[36px] transition-colors"
             >
-              <FGlyph name="x" size={16} />
+              <FGlyph name="x" size={15} />
               No me gusta
             </button>
           </div>
@@ -158,14 +158,16 @@ function RecoCard({ item, kindLabel, meta, onFav, onToggleToday, onSeen, onFeedb
 
 export default function CineTab() {
   const [sub, setSub] = useState('cartelera');
-  const [filterMode, setFilterMode] = useState('all');
+  // Vista única compartida: 'all' | 'favorites' | 'trash' (papelera por sección).
+  const [view, setView] = useState('all');
+  const showDiscarded = view === 'trash';
+  const filterMode = view === 'favorites' ? 'favorites' : 'all';
   const [cine, setCine] = useState([]);
   const [series, setSeries] = useState([]);
   const [movies, setMovies] = useState([]);
   const [seenRecos, setSeenRecos] = useState({ series: [], movies: [] });
   const [seenFor, setSeenFor] = useState(null);
   const [discarded, setDiscarded] = useState([]);
-  const [showDiscarded, setShowDiscarded] = useState(false);
   const [toast, setToast] = useState("");
   const [expandedId, setExpandedId] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -223,8 +225,10 @@ export default function CineTab() {
       load();
     };
     document.addEventListener('visibilitychange', onVisible);
+    document.addEventListener('ajustes:changed', onVisible);
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
+      document.removeEventListener('ajustes:changed', onVisible);
       if (toastTimer.current) clearTimeout(toastTimer.current);
     };
   }, []);
@@ -313,6 +317,13 @@ export default function CineTab() {
   };
 
   const counts = { cartelera: cine.length, series: series.length, movies: movies.length };
+  // La papelera es por sección: cada familia muestra solo sus descartes.
+  const inSectionTrash = (d) => {
+    if (sub === 'cartelera') return String(d.id).startsWith('cine-') || d.id === 'plan-cine-sevilla' || (d.categories || []).includes('Cine');
+    if (sub === 'series') return String(d.id).startsWith('serie-');
+    return String(d.id).startsWith('movie-');
+  };
+  const sectionTrashCount = discarded.filter(inSectionTrash).length;
   const unfiltered = sub === 'cartelera' ? cine : sub === 'series' ? series : movies;
   const table = sub === 'series' ? 'series' : sub === 'movies' ? 'movies' : null;
   let list = unfiltered;
@@ -342,41 +353,25 @@ export default function CineTab() {
         isSyncing={isSyncing}
       />
 
-      {/* Botonera fuera del hero: secciones con icono + filtros de icono */}
+      {/* Caja de control: frase + trío de iconos arriba, secciones debajo */}
       <ControlsCard>
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 flex-wrap" role="group" aria-label="Sección de cine">
-            {SUBS.map((s) => (
-              <SectionPill
-                key={s.value}
-                icon={s.icon}
-                label={s.label}
-                active={sub === s.value}
-                onClick={() => { setSub(s.value); setShowDiscarded(false); setFilterMode('all'); }}
-              />
-            ))}
-          </div>
-          <div className="flex items-center gap-1.5" role="group" aria-label="Filtrar por interés">
-            <IconToggle
-              icon="lupa"
-              label="Todos"
-              active={!showDiscarded && filterMode === 'all'}
-              onClick={() => { setFilterMode('all'); setShowDiscarded(false); }}
+        <ControlsHeader
+          question="¿Qué quieres ver hoy?"
+          view={view}
+          onView={(v) => { setView(v); setExpandedId(null); }}
+          trashCount={sectionTrashCount}
+        />
+        <div className="flex items-center gap-1.5 flex-wrap" role="group" aria-label="Sección de cine">
+          {SUBS.map((s) => (
+            <SectionPill
+              key={s.value}
+              icon={s.icon}
+              label={s.label}
+              active={sub === s.value}
+              onClick={() => { setSub(s.value); setView('all'); setExpandedId(null); }}
             />
-            <IconToggle
-              icon="corazon"
-              label="Favoritos"
-              active={!showDiscarded && filterMode === 'favorites'}
-              onClick={() => { setFilterMode('favorites'); setShowDiscarded(false); }}
-            />
-          </div>
+          ))}
         </div>
-        {discarded.length > 0 && (
-          <button onClick={() => setShowDiscarded(!showDiscarded)} type="button"
-            className="w-full text-center text-xs font-bold text-conn-muted min-h-[36px]">
-            {showDiscarded ? "Ver activos" : `Ver papelera (${discarded.length})`}
-          </button>
-        )}
       </ControlsCard>
 
       {toast && (
@@ -387,11 +382,7 @@ export default function CineTab() {
       )}
 
       <div className="space-y-2.5">
-        {(showDiscarded ? discarded.filter((d) => {
-          if (sub === 'cartelera') return String(d.id).startsWith('cine-') || d.id === 'plan-cine-sevilla' || (d.categories || []).includes('Cine');
-          if (sub === 'series') return String(d.id).startsWith('serie-');
-          return String(d.id).startsWith('movie-');
-        }) : []).map((item) => (
+        {(showDiscarded ? discarded.filter(inSectionTrash) : []).map((item) => (
           sub === 'cartelera' ? (
             <PlanCard
               key={item.id} plan={item} showDiscarded
@@ -402,7 +393,7 @@ export default function CineTab() {
             />
           ) : (
             <RecoCard
-              key={item.id} item={item} kindLabel={sub === 'series' ? 'Serie' : 'Peli'}
+              key={item.id} item={item} kind={sub}
               meta={sub === 'series' ? serieMeta(item) : movieMeta(item)}
               onFav={onFavReco(table)} onToggleToday={onToggleTodayReco(table)} onSeen={onSeenReco(table)} onFeedback={onFeedbackReco(table)} onRestore={onRestoreReco(table)}
               isExpanded={expandedId === item.id} onToggle={toggleExpanded} discarded
@@ -423,7 +414,7 @@ export default function CineTab() {
 
         {!showDiscarded && table && list.map((item) => (
           <RecoCard
-            key={item.id} item={item} kindLabel={sub === 'series' ? 'Serie' : 'Peli'}
+            key={item.id} item={item} kind={sub}
             meta={sub === 'series' ? serieMeta(item) : movieMeta(item)}
             onFav={onFavReco(table)} onToggleToday={onToggleTodayReco(table)} onSeen={onSeenReco(table)} onFeedback={onFeedbackReco(table)} onRestore={onRestoreReco(table)}
             isExpanded={expandedId === item.id} onToggle={toggleExpanded} discarded={false}
@@ -431,9 +422,19 @@ export default function CineTab() {
           />
         ))}
 
+        {showDiscarded && sectionTrashCount === 0 && (
+          <div className="conn-card text-center py-12 px-6">
+            <RecoBadge kind={sub === 'cartelera' ? 'movies' : sub} size={56} />
+            <p className="font-theme-title text-[15px] font-black text-conn-deep mb-1 mt-3">La papelera está vacía</p>
+            <p className="text-xs font-semibold text-conn-muted">
+              {sub === 'cartelera' ? 'Lo que descartes del cine irá a parar aquí durante 7 días.' : 'Lo que descartes con "No me gusta" irá a parar aquí para siempre.'}
+            </p>
+          </div>
+        )}
+
         {!showDiscarded && list.length === 0 && (
           <div className="conn-card text-center py-12 px-6">
-            <FBadge name={sub === 'cartelera' ? 'cine' : sub === 'series' ? 'varios' : 'cine'} color={sub === 'cartelera' ? '#4A6FCC' : '#12A5B5'} size={56} />
+            <RecoBadge kind={sub === 'cartelera' ? 'movies' : sub} size={56} />
             <p className="font-theme-title text-[15px] font-black text-conn-deep mb-1 mt-3">
               {filterMode === 'favorites'
                 ? 'Sin favoritos aquí todavía'
