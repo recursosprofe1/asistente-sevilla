@@ -383,14 +383,18 @@ async function checkSources() {
       return { name: src.name, zona: src.zona, ok: false, error: e.message || String(e) };
     }
   });
-  // Cines
+  // Cines: de madrugada eCartelera lista pocas sesiones (es normal, y la
+  // generadora conserva 10 días de cartelera). El umbral de aviso baja a 1
+  // entre las 22 y las 8 (Madrid) para que el check no salte en falso.
+  const horaMadrid = Number(new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', hour: 'numeric', hour12: false }).format(new Date())) % 24;
+  const CINE_MIN = (horaMadrid >= 22 || horaMadrid < 8) ? 1 : 3;
   for (const src of CINE_SOURCES) {
     try {
       const t0 = Date.now();
       const html = await fetchText(src.url);
       const allItems = scrapeCineBlocks(html, src);
       const n = allItems.length;
-      results.push({ name: src.cine, zona: 'Cine', ok: n >= 3, ms: Date.now() - t0, n, error: n < 3 ? `solo ${n} títulos con horario` : undefined });
+      results.push({ name: src.cine, zona: 'Cine', ok: n >= CINE_MIN, ms: Date.now() - t0, n, error: n < CINE_MIN ? `solo ${n} títulos con horario` : undefined });
     } catch (e) {
       results.push({ name: src.cine, zona: 'Cine', ok: false, error: e.message || String(e) });
     }
