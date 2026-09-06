@@ -1,0 +1,78 @@
+HANDOFF SUMMARY — Asistente Personal Proactivo (E:\Bibliotecas\Desktop\Asistente Personal)
+
+=== PROJECT STATUS ===
+Build complete, GitHub push OK. All features working locally, no console errors. Ready for final polish and pilot testing.
+
+=== WHAT WAS DONE (chronological) ===
+
+1. CODE VERIFICATION & BUILD
+   - node --check scripts/build-feed.mjs: OK
+   - npm run build: OK (83 modules, ~2s)
+   - Fixed Dexie BulkError in dev (StrictMode double-mount): bulkAdd → bulkPut idempotente in src/db/index.js
+
+2. CINES EN PASTILLAS (Cartelera)
+   - Export shortCineName from PlanesTab.jsx and import in CineTab.jsx
+   - Separate joined cine text by '+' and render per-cinema chips (Lagoh, Nervión, Avenida, Metromar)
+   - CineTab.jsx now shows per-cinema pills under each movie
+
+3. FAVORITOS / EN HYE FILTERS
+   - CineTab.jsx: added filter pills "Todos / Favoritos / En Hoy" (visible only in Cartelera, grayed out in Series/Películas; En Hoy solo en Cartelera)
+   - ComerTab.jsx: added same filter pills "Todos / Favoritos"
+   - Both show empty state messages per filter mode
+
+4. SYNC BUTTON CIRCULAR
+   - Replaced FBadge sync (Noto emoji with thick amber arrows → looked square/orange) with custom SyncGlyph (thin teal stroke, true circle)
+   - Applied to Planes, Cine and Comer sync buttons
+
+5. SIN VÁRIOS EN PLANES
+   - scripts/build-feed.mjs: CATEGORIES_PLANES without "Varios"; prompt clause "nunca 'Varios': artesanía, alfarería, cerámica, talleres → Arte"
+   - src/utils/planCategories.js: normalizeCategory() con pista (hint) y fallback Arte; ignora "varios"/"vario"; segunda pasada por título+resumen+venue
+   - src/services/planRepository.js: withNormalizedCategory pasa hint
+   - src/services/feedService.js: normalizeCategory(categoriesRaw, hint) con título+resumen+venue
+   - Result: 0 planes con categoría Varios en feed; los 3 casos reales (cerámica, artesanía) caen en Arte
+
+6. LAYOUT: PASTILLAS 3 COLUMNAS EN PLANES
+   - PlanesTab.jsx: grid-cols-4 → grid-cols-3, 2 filas completas siempre, sin Varios ni Cine en lista
+
+7. ESTÉTICA CINE EN SERIES/PELÍCULAS
+   - CineTab.jsx: botón "Añadir a Hoy" igual que cartelera (corazón + pastilla calendario), Vista✓/No me gusta conservados
+   - RecoCard usa misma fila de botones que cartelera
+
+8. HOY REAL PARA SERIES/PELÍCULAS (espejo de planes)
+   - src/db/index.js: añadidos toggleRecoForToday / addRecoToToday / removeRecoFromToday; toggleRecoInterest al desmarcar saca también de Hoy; misma regla cerrada que planes
+   - Filtro "En Hoy" activo en Series y Películas (no solo Cartelera)
+   - HoyTab.jsx: carga una sola lista mezclada (planes + recos), tarjeta adaptada a recos (géneros/plataformas/por qué/fuente), contador hero suma planes+recos; "Quitar de Hoy" conserva favorito, "Descartar" a papelera
+   - Comer no tocado (pendiente versión futura)
+
+9. BOTONERAS FUERA DEL HERO EN CINE/COMER (UNIFICACIÓN ESTÉTICA)
+   - CineTab.jsx y ComerTab.jsx: mueven sus filas de píldoras (tiempo/ filtros) del hero teal a una tarjeta blanca debajo, idéntica al patrón de Planes
+   - Estilo sobre blanco: filtros variantes teal/aqua (como Planes deep/aqua), sincronizar y papelera donde corresponden
+   - PlanesTab.jsx apenas se toca (ya estaba así)
+
+=== FILES MODIFIED (8 files, ~330 lines changed)
+- scripts/build-feed.mjs: prompt sin Varios, normCat con hint, CATEGORIES_PLANES, cláusula Arte por defecto
+- src/utils/planCategories.js: normalizeCategory(raw, hint) con fallback Arte; HINT_SKIP_CINE
+- src/services/planRepository.js: withNormalizedCategory pasa hint; export toggleRecoForToday etc.
+- src/services/feedService.js: normalizeCategory(categoriesRaw, hint)
+- src/db/index.js: addRecoToToday / removeRecoFromToday / toggleRecoForToday + yesterday expired logic + fields isForToday/todaySelectionDate en planes v4/v5
+- src/components/illustrations/NotoBadges.jsx: SyncGlyph nuevo (círculo teal), FBadge sin cambios
+- src/components/tabs/PlanesTab.jsx: grid-cols-3; SyncGlyph import; pastillas categoría 3 cols
+- src/components/tabs/CineTab.jsx: filter pills Todos/Favoritos/En Hoy; SyncGlyph; venue chips; hoy en Series/Pelis; botón "Añadir a Hoy" en RecoCard; lista mezclada en Hoy
+- src/components/tabs/ComerTab.jsx: filter pills Todos/Favoritos; SyncGlyph; estados vacíos por filtro
+
+=== WHAT REMAINS (next pilot cycle)
+- Verificar build + cero errores de consola
+- Probar en local (localhost:3000): Hoy → Planes → Cine → Comer, una captura por mensaje
+- Revisar web publicada en GitHub Pages (se redespliega sola)
+- Validar que Hoy mezcla planes + series/pelis sin duplicados, contador correcto
+- Opcional: pantalla Preferencias para ver/editar perfil de gustos aprendido (posterior entrega)
+
+=== NEXT STEPS (cuando continúes)
+1. Abre http://localhost:3000/ y sincroniza.
+2. Marca 1-2 series/pelis como favorito+ Hoy; verifica que aparecen en la lista mezclada de Hoy.
+3. Abre Planes: comprueba que las pastillas de categorías son 3 columnas, 2 filas, sin Varios.
+4. Abre Cine: verifica pastillas de cines, filtros Todos/Favoritos/En Hoy, botón sync circular.
+5. Abre Comer: verifica filtros Todos/Favoritos, botón sync circular.
+6. Dime OK y miramos la web publicada.
+
+Archivo guardado como: handoff.txt (raíz del proyecto)

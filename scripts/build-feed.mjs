@@ -10,7 +10,7 @@
  */
 import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, appendFileSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import {
   TASTE_SEED, buildAudiovisualPrompt, buildFoodPrompt,
   normalizeSerie, normalizeMovie, normalizePlace
@@ -54,7 +54,7 @@ const FRESH_FIXED = [
 const POOL = [
   // SEVILLA A
   { name: 'Lope de Vega', url: 'https://www.sevilla.org/teatro-lope-de-vega/eventos', zona: 'Sevilla', grupo: 'A' },
-  { name: 'Sala Cero', url: 'https://www.salacero.com/', zona: 'Sevilla', grupo: 'A' },
+  { name: 'Sala Cero', url: 'https://salacero.com/programacion-salacero/', zona: 'Sevilla', grupo: 'A' },
   { name: 'ROSS', url: 'https://www.rossevilla.es/', zona: 'Sevilla', grupo: 'A' },
   { name: 'Junta expos Sevilla', url: 'https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/actividades/exposiciones-en-sevilla', zona: 'Sevilla', grupo: 'A' },
   { name: 'Santa Clara', url: 'https://icas.sevilla.org/espacios/espacio-santa-clara', zona: 'Sevilla', grupo: 'A' },
@@ -405,6 +405,18 @@ async function checkSources() {
     console.log(`${r.ok ? 'OK  ' : 'FALLO'} [${r.zona}] ${r.name}${r.ok ? ` (${r.n} cand, ${r.ms}ms)` : ` — ${r.error}`}`);
   }
   console.log(`\nResumen: ${ok.length}/${results.length} legibles.`);
+  // Resumen público del check (visible en la página del run sin logs).
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    const md = [
+      `## Check de fuentes — grupo ${GROUP} · ${ok.length}/${results.length} legibles`,
+      '',
+      '| Fuente | Zona | Estado | Detalle |',
+      '|---|---|---|---|',
+      ...results.map((r) => `| ${r.name} | ${r.zona} | ${r.ok ? 'OK' : '**FALLO**'} | ${r.ok ? `${r.n} cand · ${r.ms} ms` : String(r.error || '').replace(/\|/g, '/')} |`),
+      ''
+    ].join('\n');
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, md);
+  }
   if (bad.length) { console.log('A sustituir: ' + bad.map((r) => r.name).join(', ')); process.exitCode = 2; }
 }
 

@@ -22,7 +22,7 @@ Excluidos de todo: deporte, toros, religioso y flamenco.
 | Fuente | URL | Grupo | Por qué |
 |--------|-----|-------|---------|
 | Teatro Lope de Vega | https://www.sevilla.org/teatro-lope-de-vega/eventos | A | Grande municipal, fechas claras |
-| Sala Cero Teatro | https://www.salacero.com/ | A | Alternativa íntima centro |
+| Sala Cero Teatro | https://salacero.com/programacion-salacero/ | A | Alternativa íntima centro (la home www da capa JS al runner; la programación, no) |
 | ROSS | https://www.rossevilla.es/ | A | Sinfónica propia |
 | Junta expos Sevilla | https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/actividades/exposiciones-en-sevilla | A | Temporales oficiales |
 | Santa Clara | https://icas.sevilla.org/espacios/espacio-santa-clara | A | Emergente y ciclos |
@@ -51,7 +51,7 @@ Excluidos de todo: deporte, toros, religioso y flamenco.
 | Fuente | URL | Grupo | Por qué |
 |--------|-----|-------|---------|
 | entradas.huelva.es | https://entradas.huelva.es/ | A | Gran Teatro + Colón con precio |
-| Diputación Huelva | https://www.diphuelva.es/cultura/ | A | Pueblos y condado |
+| Diputación Huelva | https://www.diphuelva.es/cultura/ | A | Pueblos y condado (404 intermitente al runner: fetchText prueba UA navegador e index.html) |
 | Moguer (Junta) | https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/actividades/moguer | B | Huelva, fiable Junta |
 | Almonte (Junta) | https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/actividades/almonte | B | Huelva, fiable Junta |
 | Aracena (Junta) | https://www.juntadeandalucia.es/cultura/agendaculturaldeandalucia/actividades/aracena | C | Sierra |
