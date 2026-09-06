@@ -336,13 +336,14 @@ export async function initializeDatabase() {
     // TAREAS: Seed inicial + garantizar que el catálogo nunca quede vacío
     const taskCount = await db.tasks.count();
     if (taskCount === 0) {
-      await db.tasks.bulkAdd(INITIAL_TASKS);
+      // bulkPut (no bulkAdd): idempotente ante el doble montaje de StrictMode en dev.
+      await db.tasks.bulkPut(INITIAL_TASKS);
     } else if (taskCount < 15) {
       // Re-seed parcial: añadir solo las tareas que falten
       const existing = await db.tasks.toArray();
       const existingIds = new Set(existing.map((t) => t.id));
       const missing = INITIAL_TASKS.filter((t) => !existingIds.has(t.id));
-      if (missing.length > 0) await db.tasks.bulkAdd(missing);
+      if (missing.length > 0) await db.tasks.bulkPut(missing);
     }
 
     // PLANES: Ya no sembramos planes locales por defecto.

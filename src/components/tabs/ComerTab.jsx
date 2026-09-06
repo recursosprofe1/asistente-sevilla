@@ -5,6 +5,13 @@ import { getTasteProfile } from "../../services/recoService";
 import { syncPlansFromCloud } from "../../services/feedService";
 import { PlanWhy, PlanSourceLink } from "../plans/shared";
 
+const FILTER_MODES = [
+  { value: 'all', label: 'Todos' },
+  { value: 'favorites', label: 'Favoritos' },
+];
+
+const isFavPlace = (p) => p.userStatus === "interested" || p.status === "interested";
+
 function scorePlace(p, profile) {
   const likes = (profile.food?.learnedLikes || []).map((s) => s.replace(/ x\d+$/, '').toLowerCase());
   const avoid = (profile.food?.learnedAvoid || []).map((s) => s.replace(/ x\d+$/, '').toLowerCase());
@@ -23,6 +30,7 @@ function scorePlace(p, profile) {
 
 export default function ComerTab() {
   const [places, setPlaces] = useState([]);
+  const [filterMode, setFilterMode] = useState('all');
   const [discarded, setDiscarded] = useState([]);
   const [showDiscarded, setShowDiscarded] = useState(false);
   const [toast, setToast] = useState("");
@@ -91,7 +99,11 @@ export default function ComerTab() {
     showToast("Restaurado");
   };
 
-  const list = showDiscarded ? discarded : places;
+  const list = showDiscarded
+    ? discarded
+    : filterMode === 'favorites'
+      ? places.filter(isFavPlace)
+      : places;
 
   return (
     <div className="space-y-3 pb-28 pt-1">
@@ -117,6 +129,21 @@ export default function ComerTab() {
         <p className="text-[11px] font-bold text-white/80 mt-2">
           10 sitios por semana · con cocina, precio y plato famoso
         </p>
+        <div className="flex items-center gap-1.5 mt-2.5" role="group" aria-label="Filtrar por interés">
+          {FILTER_MODES.map((m) => (
+            <button
+              key={m.value}
+              type="button"
+              onClick={() => { setFilterMode(m.value); setShowDiscarded(false); }}
+              aria-pressed={filterMode === m.value && !showDiscarded}
+              className={`px-3 py-1 rounded-full text-[11px] font-black min-h-[32px] transition-all ${
+                filterMode === m.value && !showDiscarded ? 'bg-conn-amberSoft text-conn-deep' : 'bg-white/20 text-white'
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {discarded.length > 0 && (
@@ -237,9 +264,19 @@ export default function ComerTab() {
           <div className="conn-card text-center py-12 px-6">
             <FBadge name="gastro" color="#E07040" size={56} />
             <p className="font-theme-title text-[15px] font-black text-conn-deep mb-1 mt-3">
-              {showDiscarded ? "La papelera está vacía" : "Nada por aquí todavía"}
+              {showDiscarded
+                ? "La papelera está vacía"
+                : filterMode === 'favorites'
+                  ? "Sin favoritos aquí todavía"
+                  : "Nada por aquí todavía"}
             </p>
-            <p className="text-xs font-semibold text-conn-muted">Sincroniza para traer los sitios de la semana.</p>
+            <p className="text-xs font-semibold text-conn-muted">
+              {showDiscarded
+                ? ""
+                : filterMode === 'favorites'
+                  ? "Marca el corazón en un sitio para verlo aquí."
+                  : "Sincroniza para traer los sitios de la semana."}
+            </p>
           </div>
         )}
       </div>

@@ -40,7 +40,7 @@ function diasRestantesEnPapelera(plan) {
 // -- Tarjeta individual (reutilizada en Cine) --------------------------
 export function PlanCard({
   plan, showDiscarded, isExpanded, onToggle,
-  onToggleInterest, onToggleForToday, onDiscard, onRestore, todayKey
+  onToggleInterest, onToggleForToday, onDiscard, onRestore, todayKey, venueChips
 }) {
   const isInterested = plan.userStatus === "interested" || plan.status === "interested";
   const isForToday = plan.isForToday === true && plan.todaySelectionDate === todayKey;
@@ -70,10 +70,19 @@ export function PlanCard({
                 {plan.summary || String(plan.longDescription).slice(0, 140)}
               </p>
             )}
-            <div className="flex items-center gap-1 mt-1.5 text-xs font-bold text-conn-muted">
-              <FBadge name="pin" color="#0E7E8C" size={20} />
-              <span className="truncate">{plan.venue}{plan.municipality ? `· ${plan.municipality}` : ""}</span>
-            </div>
+            {Array.isArray(venueChips) && venueChips.length > 0 ? (
+              <div className="flex items-center gap-1 mt-1.5 flex-wrap" aria-label={`Cines: ${venueChips.join(', ')}`}>
+                <FBadge name="pin" color="#0E7E8C" size={20} />
+                {venueChips.map((c) => (
+                  <span key={c} className="text-[10px] font-black text-conn-tealDark bg-conn-mist px-2 py-0.5 rounded-full">{c}</span>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 mt-1.5 text-xs font-bold text-conn-muted">
+                <FBadge name="pin" color="#0E7E8C" size={20} />
+                <span className="truncate">{plan.venue}{plan.municipality ? `· ${plan.municipality}` : ""}</span>
+              </div>
+            )}
             {!showDiscarded && (isInterested || isForToday) && (
               <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                 {isInterested && (
@@ -220,7 +229,7 @@ function CategoryCircle({ label, active, onClick, category }) {
 }
 
 // Nombre corto de cine para que quepa sin scroll.
-function shortCineName(venue) {
+export function shortCineName(venue) {
   const v = String(venue || '');
   if (/lagoh/i.test(v)) return 'Lagoh';
   if (/nervi/i.test(v)) return 'Nervión';

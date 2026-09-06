@@ -3,7 +3,7 @@ import { FBadge, FGlyph, CategoryBadge } from "../illustrations/NotoBadges";
 import { db, getVisibleRecos, toggleRecoInterest, feedbackReco, restoreReco } from "../../db";
 import { getTasteProfile } from "../../services/recoService";
 import { syncPlansFromCloud } from "../../services/feedService";
-import { PlanCard } from "./PlanesTab";
+import { PlanCard, shortCineName } from "./PlanesTab";
 import {
   toggleInterest, addPlanToToday, removePlanFromToday, discardPlanRepo, restorePlanRepo
 } from "../../services/planRepository";
@@ -16,6 +16,22 @@ const SUBS = [
   { value: 'series', label: 'Series' },
   { value: 'movies', label: 'Películas' },
 ];
+
+const FILTER_MODES = [
+  { value: 'all', label: 'Todos' },
+  { value: 'favorites', label: 'Favoritos' },
+];
+
+// Cines de una tarjeta de cartelera como pastillas cortas.
+// La cocina agrupa por peli y junta los cines en "A + B": aquí se separan.
+function cineChipsOf(plan) {
+  return String(plan?.venue || "")
+    .split("+")
+    .map((s) => shortCineName(s.trim()))
+    .filter(Boolean);
+}
+
+const isFavItem = (p) => p.userStatus === "interested" || p.status === "interested";
 
 function scoreByProfile(item, profile, kind) {
   const likes = (profile[kind]?.learnedLikes || []).map((s) => s.replace(/ x\d+$/, '').toLowerCase());
@@ -124,6 +140,7 @@ function RecoCard({ item, kindLabel, meta, onFav, onFeedback, onRestore, isExpan
 
 export default function CineTab() {
   const [sub, setSub] = useState('cartelera');
+  const [filterMode, setFilterMode] = useState('all');
   const [cine, setCine] = useState([]);
   const [series, setSeries] = useState([]);
   const [movies, setMovies] = useState([]);
@@ -236,7 +253,13 @@ export default function CineTab() {
   const onRestoreCineTrash = async (e, id) => { e.stopPropagation(); await restorePlanRepo(id); await load(); showToast("Restaurado"); };
 
   const counts = { cartelera: cine.length, series: series.length, movies: movies.length };
-  const list = sub === 'cartelera' ? cine : sub === 'series' ? series : movies;
+  const unfiltered = sub === 'cartelera' ? cine : sub === 'series' ? series : movies;
+  let list = unfiltered;
+  if (!showDiscarded && filterMode === 'favorites') list = list.filter(isFavItem);
+  // "En Hoy" solo existe en cartelera (series/pelis/comer no tienen Hoy).
+  if (!showDiscarded && filterMode === 'today' && sub === 'cartelera') {
+    list = list.filter((p) => p.isForToday === true && p.todaySelectionDate === todayKey);
+  }
   const table = sub === 'series' ? 'series' : sub === 'movies' ? 'movies' : null;
 
   const serieMeta = (s) => [
@@ -278,7 +301,7 @@ export default function CineTab() {
             <button
               key={s.value}
               type="button"
-              onClick={() => { setSub(s.value); setShowDiscarded(false); }}
+              onClick={() => { setSub(s.value); setShowDiscarded(false); setFilterMode('all'); }}
               aria-pressed={sub === s.value}
               className={`px-3.5 py-1.5 rounded-full text-xs font-black min-h-[36px] transition-all ${
                 sub === s.value ? 'bg-white text-conn-deep' : 'bg-white/20 text-white'
@@ -287,6 +310,33 @@ export default function CineTab() {
               {s.label}
             </button>
           ))}
+        </div>
+        <div className="flex items-center gap-1.5 mt-1.5" role="group" aria-label="Filtrar por interés">
+          {FILTER_MODES.map((m) => (
+            <button
+              key={m.value}
+              type="button"
+              onClick={() => { setFilterMode(m.value); setShowDiscarded(false); }}
+              aria-pressed={filterMode === m.value && !showDiscarded}
+              className={`px-3 py-1 rounded-full text-[11px] font-black min-h-[32px] transition-all ${
+                filterMode === m.value && !showDiscarded ? 'bg-conn-amberSoft text-conn-deep' : 'bg-white/20 text-white'
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+          {sub === 'cartelera' && (
+            <button
+              type="button"
+              onClick={() => { setFilterMode('today'); setShowDiscarded(false); }}
+              aria-pressed={filterMode === 'today' && !showDiscarded}
+              className={`px-3 py-1 rounded-full text-[11px] font-black min-h-[32px] transition-all ${
+                filterMode === 'today' && !showDiscarded ? 'bg-conn-amberSoft text-conn-deep' : 'bg-white/20 text-white'
+              }`}
+            >
+              En Hoy
+            </button>
+          )}
         </div>
       </div>
 
@@ -316,6 +366,7 @@ export default function CineTab() {
               isExpanded={expandedId === item.id} onToggle={toggleExpanded}
               onToggleInterest={onToggleInterest} onToggleForToday={onToggleForToday}
               onDiscard={onDiscardCineTrash} onRestore={onRestoreCineTrash} todayKey={todayKey}
+              venueChips={cineChipsOf(item)}
             />
           ) : (
             <RecoCard
@@ -327,12 +378,13 @@ export default function CineTab() {
           )
         ))}
 
-        {!showDiscarded && sub === 'cartelera' && cine.map((plan) => (
+        {!showDiscarded && sub === 'cartelera' && list.map((plan) => (
           <PlanCard
             key={plan.id} plan={plan} showDiscarded={false}
             isExpanded={expandedId === plan.id} onToggle={toggleExpanded}
             onToggleInterest={onToggleInterest} onToggleForToday={onToggleForToday}
             onDiscard={onDiscardPlan} onRestore={onRestorePlan} todayKey={todayKey}
+            venueChips={cineChipsOf(plan)}
           />
         ))}
 
@@ -348,8 +400,18 @@ export default function CineTab() {
         {!showDiscarded && list.length === 0 && (
           <div className="conn-card text-center py-12 px-6">
             <FBadge name={sub === 'cartelera' ? 'cine' : sub === 'series' ? 'varios' : 'cine'} color={sub === 'cartelera' ? '#4A6FCC' : '#12A5B5'} size={56} />
-            <p className="font-theme-title text-[15px] font-black text-conn-deep mb-1 mt-3">Nada por aquí todavía</p>
-            <p className="text-xs font-semibold text-conn-muted">Sincroniza para traer las novedades de la semana.</p>
+            <p className="font-theme-title text-[15px] font-black text-conn-deep mb-1 mt-3">
+              {filterMode === 'favorites'
+                ? 'Sin favoritos aquí todavía'
+                : filterMode === 'today'
+                  ? 'Nada en Hoy en esta sección'
+                  : 'Nada por aquí todavía'}
+            </p>
+            <p className="text-xs font-semibold text-conn-muted">
+              {filterMode === 'all'
+                ? 'Sincroniza para traer las novedades de la semana.'
+                : 'Marca el corazón o "Añadir a Hoy" en una tarjeta para verla aquí.'}
+            </p>
           </div>
         )}
       </div>
