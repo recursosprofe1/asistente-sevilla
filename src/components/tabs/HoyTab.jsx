@@ -68,7 +68,7 @@ export default function HoyTab({ onNavigateTab }) {
     <div className="space-y-3 pb-28 pt-1">
       {/* -- Hero --------------------------- */}
       <div className="conn-hero px-5 pt-5 pb-5 text-white">
-        <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-white/80 mb-1">
+        <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-white/80 mb-1">
           {greeting}
         </p>
         <h2 className="font-theme-title text-[22px] font-black leading-tight capitalize">
@@ -145,11 +145,11 @@ export default function HoyTab({ onNavigateTab }) {
                         {plan.title}
                       </h3>
                       {(plan.summary || plan.longDescription) && category !== 'Cine' && (
-                        <p className="text-[11px] text-conn-muted leading-snug line-clamp-2 mt-1 font-semibold">
+                        <p className="text-xs text-conn-muted leading-snug line-clamp-2 mt-1 font-semibold">
                           {plan.summary || String(plan.longDescription).slice(0, 140)}
                         </p>
                       )}
-                      <div className="flex items-center gap-1.5 mt-1.5 text-[11px] font-bold text-conn-muted">
+                      <div className="flex items-center gap-1.5 mt-1.5 text-xs font-bold text-conn-muted">
                         <FBadge name="pin" color="#0E7E8C" size={20} />
                         <span className="truncate">{plan.venue}{plan.municipality ? ` · ${plan.municipality}` : ""}</span>
                       </div>
@@ -157,7 +157,7 @@ export default function HoyTab({ onNavigateTab }) {
 
                     <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                       {plan.travelMinutes != null ? (
-                        <span className="text-[11px] font-black text-conn-tealDark bg-conn-mist px-2 py-0.5 rounded-full">
+                        <span className="text-xs font-black text-conn-tealDark bg-conn-mist px-2 py-0.5 rounded-full">
                           {plan.travelMinutes} min
                         </span>
                       ) : (
@@ -173,7 +173,7 @@ export default function HoyTab({ onNavigateTab }) {
 
                   {plan.priceText && (
                     <div className="px-4 pb-3 -mt-1">
-                      <span className="text-[11px] font-bold text-conn-muted">{plan.priceText}</span>
+                      <span className="text-xs font-bold text-conn-muted">{plan.priceText}</span>
                     </div>
                   )}
                 </button>
@@ -182,12 +182,12 @@ export default function HoyTab({ onNavigateTab }) {
                 {isExpanded && (
                   <div id={`hoy-detalle-${plan.id}`} className="border-t border-conn-aqua px-4 py-3 space-y-3">
                     {plan.startsAt && (
-                      <p className="text-[11px] font-bold text-conn-muted flex items-center gap-1.5">
+                      <p className="text-xs font-bold text-conn-muted flex items-center gap-1.5">
                         <FBadge name="reloj" color="#0E7E8C" size={20} />
                         Fecha del evento: {plan.startsAt}
                       </p>
                     )}
-                    <p className="text-[11px] font-bold text-conn-muted/70 flex items-center gap-1.5">
+                    <p className="text-xs font-bold text-conn-muted/70 flex items-center gap-1.5">
                       <FBadge name="calendario" color="#5E8B91" size={20} />
                       Añadido a Hoy hoy · la selección se renueva cada día
                     </p>

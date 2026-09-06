@@ -11,6 +11,10 @@
  */
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  TASTE_SEED, buildAudiovisualPrompt, buildFoodPrompt,
+  normalizeSerie, normalizeMovie, normalizePlace
+} from '../src/services/recoService.js';
 
 const GEMINI_KEY = process.env.GEMINI_KEY || '';
 // 2.0 jubilado 01/06/2026 · 2.x bloqueado a cuentas nuevas → 3.6-flash (estable).
@@ -448,8 +452,49 @@ async function fullRun() {
       byTitle[key].travelMinutes = Math.min(byTitle[key].travelMinutes, m.travelMinutes);
     }
   }
+  // ── Series + pelis + sitios (con perfil de gustos + anti-repetición) ──
+  // El aprendizaje fino vive en el móvil (reordena por tu perfil local);
+  // aquí se garantiza semilla de gustos y no repetir lo ya servido.
   const now = new Date();
   const nowMs = now.getTime();
+  const prevTitles = new Set();
+  try {
+    const prev = JSON.parse(readFileSync('feeds/feed-latest.json', 'utf8'));
+    for (const k of ['series', 'movies', 'places']) {
+      for (const it of (prev[k] || [])) {
+        if (it && it.title) prevTitles.add(String(it.title).toLowerCase().trim());
+      }
+    }
+  } catch { /* primera ejecución: sin anterior */ }
+  const notBefore = (arr) => (arr || [])
+    .filter((p) => p && p.title && !prevTitles.has(String(p.title).toLowerCase().trim()));
+
+  let series = [], movies = [], places = [];
+  const avMissing = [], foodMissing = [];
+  try {
+    const avRaw = (await geminiGenerate(buildAudiovisualPrompt(TASTE_SEED))).text
+      .replace(/```json/g, '').replace(/```/g, '').trim();
+    const av = JSON.parse(avRaw);
+    const noTerror = (t) => !/terror|reality|telenovela/i.test(`${t.title || ''} ${(t.genres || []).join(' ')}`);
+    series = notBefore(av.series).filter((p) => noTerror(p) && p.sourceUrl && /^https:\/\//i.test(p.sourceUrl)).map((p) => normalizeSerie(p, nowMs)).slice(0, 8);
+    movies = notBefore(av.movies).filter((p) => p.sourceUrl && /^https:\/\//i.test(p.sourceUrl)).map((p) => normalizeMovie(p, nowMs)).slice(0, 8);
+    if (series.length < 5) avMissing.push(`Series ${series.length}/5`);
+    if (movies.length < 5) avMissing.push(`Pelis ${movies.length}/5`);
+  } catch (e) {
+    avMissing.push('Series/pelis: fallo IA (' + String(e.message || e).slice(0, 120) + ')');
+  }
+  try {
+    const foodRaw = (await geminiGenerate(buildFoodPrompt(TASTE_SEED))).text
+      .replace(/```json/g, '').replace(/```/g, '').trim();
+    const food = JSON.parse(foodRaw);
+    places = notBefore(food.places)
+      .filter((p) => p.zone && p.sourceUrl && /^https:\/\//i.test(p.sourceUrl))
+      .map((p) => normalizePlace(p, nowMs)).slice(0, 14);
+    if (places.length < 10) foodMissing.push(`Comer ${places.length}/10`);
+  } catch (e) {
+    foodMissing.push('Comer: fallo IA (' + String(e.message || e).slice(0, 120) + ')');
+  }
+
   const cartelera = Object.values(byTitle).map((e) => ({ titulo: e.titulo, cine: e.cines.join(' + '), sesiones: e.sesiones, url: e.url, travelMinutes: e.travelMinutes, seenAt: nowMs }));
   // Unión con lo anterior: lo nuevo manda (actualiza sesiones); lo que ya no
   // sale pero se vio hace menos de 10 días se conserva para no vaciar la
@@ -472,12 +517,12 @@ async function fullRun() {
   } catch { /* primera ejecución: sin anterior */ }
 
   const feed = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     generatedAt: toIsoMadrid(now),
     validUntil: toIsoMadrid(new Date(now.getTime() + VALID_DAYS * 86400000)),
-    status: (missing.length === 0 && !carteleraPartial && deduped.length >= 10) ? 'ok' : 'partial',
-    quotasMissing: missing, cineErrors, searchErrors: errors,
-    planes, cartelera,
+    status: (missing.length === 0 && !carteleraPartial && deduped.length >= 10 && avMissing.length === 0 && foodMissing.length === 0) ? 'ok' : 'partial',
+    quotasMissing: [...missing, ...avMissing, ...foodMissing], cineErrors, searchErrors: errors,
+    planes, cartelera, series, movies, places,
   };
   mkdirSync('feeds', { recursive: true });
   const day = now.toISOString().slice(0, 10);
@@ -487,15 +532,15 @@ async function fullRun() {
   const report = [
     `# Parte ${day} ${now.toISOString().slice(11, 16)} UTC · grupo ${GROUP} · modelo ${MODEL_USED}`,
     ``,
-    `- Estado: **${feed.status}** · Planes: **${planes.length}** (Sevilla ${nSevilla} · Huelva/Cádiz ${nHC} · Rutas ${nRutas}) · Pelis: **${cartelera.length}**`,
-    `- Cuotas sin cubrir: ${missing.length ? missing.join(', ') : 'ninguna'}`,
+    `- Estado: **${feed.status}** · Planes: **${planes.length}** (Sevilla ${nSevilla} · Huelva/Cádiz ${nHC} · Rutas ${nRutas}) · Pelis: **${cartelera.length}** · Series: **${series.length}** · Cine-casa: **${movies.length}** · Comer: **${places.length}**`,
+    `- Cuotas sin cubrir: ${[...missing, ...avMissing, ...foodMissing].length ? [...missing, ...avMissing, ...foodMissing].join(', ') : 'ninguna'}`,
     `- Fuentes con aviso: ${errors.length ? errors.join(' / ') : 'ninguna'}`,
     `- Cines con aviso: ${cineErrors.length ? cineErrors.join(' / ') : 'ninguno'}`,
     `- Válido hasta: ${feed.validUntil}`,
     `- Intentos de modelo: ${MODEL_ATTEMPTS.length ? MODEL_ATTEMPTS.join(' / ') : 'primero OK (' + MODEL_USED + ')'}`,
   ].join('\n');
   writeFileSync('feeds/last-run.md', report);
-  console.log(`Feed: ${planes.length} planes (Sev ${nSevilla} HC ${nHC} Rutas ${nRutas}) + ${cartelera.length} pelis. Sin cubrir: ${JSON.stringify(missing)}. Grupo ${GROUP}. Modelo ${MODEL_USED}.`);
+  console.log(`Feed: ${planes.length} planes + ${cartelera.length} pelis + ${series.length} series + ${movies.length} movies + ${places.length} places. Grupo ${GROUP}. Modelo ${MODEL_USED}.`);
 }
 
 if (CHECK_ONLY) await checkSources();

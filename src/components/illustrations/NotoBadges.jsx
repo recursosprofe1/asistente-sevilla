@@ -81,6 +81,8 @@ const NAV_STYLE = {
   casa: 'casa',
   compras: 'bolsa',
   decisiones: 'balanza',
+  cine: 'cine',
+  comer: 'gastro',
 };
 
 const NAV_COLOR = {
@@ -89,6 +91,8 @@ const NAV_COLOR = {
   casa: "#3A9E70",
   compras: "#E07040",
   decisiones: "#4A6FCC",
+  cine: "#4A6FCC",
+  comer: "#E07040",
 };
 
 function Disc({ color, size, children }) {

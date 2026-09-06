@@ -4,9 +4,9 @@ import { NavBadge } from './illustrations/NotoBadges';
 export const TABS = [
   { id: 'hoy', label: 'Hoy' },
   { id: 'planes', label: 'Planes' },
-  { id: 'casa', label: 'Casa', disabled: true },
-  { id: 'compras', label: 'Compras', disabled: true },
-  { id: 'decisiones', label: 'Decisiones', disabled: true },
+  { id: 'cine', label: 'Cine' },
+  { id: 'comer', label: 'Comer' },
+  // Casa/Compras/Decisiones ocultas de momento (código intacto).
 ];
 
 export default function BottomNavigation({ activeTab, onSelectTab }) {
@@ -18,7 +18,7 @@ export default function BottomNavigation({ activeTab, onSelectTab }) {
     >
       <div className="pointer-events-auto bg-white/95 backdrop-blur-lg rounded-[28px] px-3 py-2 transition-all"
         style={{ boxShadow: '0 14px 30px -10px rgba(10, 91, 102, 0.30)' }}>
-        <div className="grid grid-cols-5 gap-1">
+        <div className="grid grid-cols-4 gap-1">
           {TABS.map((tab) => {
             const isActive = activeTab === tab.id;
             const isDisabled = !!tab.disabled;

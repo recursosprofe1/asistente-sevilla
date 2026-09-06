@@ -22,7 +22,7 @@ export function CineMovies({ longDescription }) {
               </span>
             )}
           </div>
-          {peli.sinopsis && <p className="text-[11px] text-conn-muted leading-snug">{peli.sinopsis}</p>}
+          {peli.sinopsis && <p className="text-xs text-conn-muted leading-snug">{peli.sinopsis}</p>}
           {peli.url && String(peli.url).startsWith('https://') && (
             <a
               href={peli.url}
@@ -63,7 +63,7 @@ export function PlanSourceLink({ url }) {
       target="_blank"
       rel="noreferrer"
       onClick={(e) => e.stopPropagation()}
-      className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-conn-tealDark hover:underline"
+      className="inline-flex items-center gap-1.5 text-xs font-extrabold text-conn-tealDark hover:underline"
     >
       <FGlyph name="externo" size={14} color="#0E7E8C" />
       Más información
@@ -79,7 +79,7 @@ export function FeedStatusLine({ lastSyncedAt, stale, light = false }) {
     ? 'text-white/80'
     : (stale ? 'text-conn-amber font-bold' : 'text-conn-muted');
   return (
-    <p className={`text-[11px] mt-1 ${cls}`} role="status">
+    <p className={`text-xs mt-1 ${cls}`} role="status">
       {label}
       {stale ? ' · usando caché anterior' : ''}
     </p>

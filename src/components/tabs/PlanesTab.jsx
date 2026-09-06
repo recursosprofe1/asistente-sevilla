@@ -37,8 +37,8 @@ function diasRestantesEnPapelera(plan) {
   return Math.max(0, 7 - Math.floor(diff / (1000 * 60 * 60 * 24)));
 }
 
-// -- Tarjeta individual --------------------------
-function PlanCard({
+// -- Tarjeta individual (reutilizada en Cine) --------------------------
+export function PlanCard({
   plan, showDiscarded, isExpanded, onToggle,
   onToggleInterest, onToggleForToday, onDiscard, onRestore, todayKey
 }) {
@@ -66,11 +66,11 @@ function PlanCard({
               {plan.title}
             </h3>
             {(plan.summary || (plan.longDescription && category !== 'Cine')) && (
-              <p className="text-[11px] font-semibold text-conn-muted leading-snug line-clamp-2 mt-1">
+              <p className="text-xs font-semibold text-conn-muted leading-snug line-clamp-2 mt-1">
                 {plan.summary || String(plan.longDescription).slice(0, 140)}
               </p>
             )}
-            <div className="flex items-center gap-1 mt-1.5 text-[11px] font-bold text-conn-muted">
+            <div className="flex items-center gap-1 mt-1.5 text-xs font-bold text-conn-muted">
               <FBadge name="pin" color="#0E7E8C" size={20} />
               <span className="truncate">{plan.venue}{plan.municipality ? `· ${plan.municipality}` : ""}</span>
             </div>
@@ -97,7 +97,7 @@ function PlanCard({
               </span>
             ) : (
               plan.travelMinutes != null ? (
-                <span className="text-[11px] font-black text-conn-tealDark bg-conn-mist px-2 py-0.5 rounded-full">
+                <span className="text-xs font-black text-conn-tealDark bg-conn-mist px-2 py-0.5 rounded-full">
                   {plan.travelMinutes} min
                 </span>
               ) : (
@@ -112,14 +112,14 @@ function PlanCard({
 
         {plan.priceText && (
           <div className="px-4 pb-3 -mt-1">
-            <span className="text-[11px] font-bold text-conn-muted">{plan.priceText}</span>
+            <span className="text-xs font-bold text-conn-muted">{plan.priceText}</span>
           </div>
         )}
 
         {Array.isArray(plan.sesiones) && plan.sesiones.length > 0 && (
           <div className="px-4 pb-3 -mt-1 flex items-center gap-1.5 flex-wrap" aria-label={`Sesiones de ${plan.title}`}>
             {plan.sesiones.slice(0, 4).map((s, i) => (
-              <span key={i} className="text-[11px] font-black text-conn-tealDark bg-conn-mist px-2 py-0.5 rounded-full">
+              <span key={i} className="text-xs font-black text-conn-tealDark bg-conn-mist px-2 py-0.5 rounded-full">
                 {s}
               </span>
             ))}
@@ -162,7 +162,7 @@ function PlanCard({
       {isExpanded && (
         <div id={`plan-detalle-${plan.id}`} className="border-t border-conn-aqua px-4 py-3 space-y-3">
           {plan.startsAt && (
-            <p className="text-[11px] font-bold text-conn-muted flex items-center gap-1.5">
+            <p className="text-xs font-bold text-conn-muted flex items-center gap-1.5">
               <FBadge name="reloj" color="#0E7E8C" size={20} />
               {plan.startsAt}
             </p>
@@ -422,7 +422,7 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
         <div className="flex items-start justify-between gap-2">
           <div>
             <h2 className="font-theme-title text-[22px] font-black leading-tight">Planes</h2>
-            <p className="text-[11px] font-bold text-white/85 mt-1" role="status">
+            <p className="text-xs font-bold text-white/85 mt-1" role="status">
               {showDiscarded
                 ? `${discardedPlans.length} en papelera · se purgan a los 7 días`
                 : `${sourceList.length} sugerencias cerca de ti`}
@@ -454,17 +454,17 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
         </div>
         <FeedStatusLine lastSyncedAt={feedMeta?.lastSyncedAt} stale={feedStale} light />
         {feedStale && (
-          <p className="text-[11px] text-conn-amber font-black mt-1" role="status">
+          <p className="text-xs text-conn-amber font-black mt-1" role="status">
             El feed puede estar desactualizado. Sincroniza cuando tengas conexión.
           </p>
         )}
       </div>
 
       <details className="bg-white rounded-3xl px-4 py-2.5 mx-1" style={{ boxShadow: '0 8px 20px -12px rgba(10, 91, 102, 0.25)' }}>
-        <summary className="text-[11px] font-black text-conn-muted cursor-pointer min-h-[40px] flex items-center">
+        <summary className="text-xs font-black text-conn-muted cursor-pointer min-h-[40px] flex items-center">
           Diagnóstico: {totalCount} en base · {plans.length} visibles · {discardedPlans.length} en papelera
         </summary>
-        <div className="text-[11px] font-semibold text-conn-muted space-y-1 pb-2 pt-1" role="status">
+        <div className="text-xs font-semibold text-conn-muted space-y-1 pb-2 pt-1" role="status">
           <p>Retirados del feed (ocultos): {staleCount}</p>
           <p>Última sincronización: {feedMeta?.lastSyncedAt ? new Date(feedMeta.lastSyncedAt).toLocaleString('es-ES') : 'nunca'}</p>
           <p>Generado por el feed: {feedMeta?.generatedAt || 'sin dato'}</p>
@@ -477,7 +477,7 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
 
       {/* Control de tiempo + filtros */}
       <div className="conn-card p-4">
-        <p className="text-[11px] font-bold text-conn-muted leading-relaxed mb-2.5">
+        <p className="text-xs font-bold text-conn-muted leading-relaxed mb-2.5">
           ¿Hasta dónde viajas hoy?
         </p>
 
@@ -495,7 +495,7 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
                 }`}
                 style={isSelected ? { boxShadow: '0 8px 16px -8px rgba(18, 165, 181, 0.7)' } : undefined}
               >
-                <span className="text-[11px] font-black leading-none">{opt.label}</span>
+                <span className="text-xs font-black leading-none">{opt.label}</span>
                 <span className={`text-[8px] mt-0.5 leading-none font-bold ${isSelected ? "text-white/85" : "text-conn-muted/70"}`}>
                   {opt.sub}
                 </span>
@@ -512,7 +512,7 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
               type="button"
               onClick={() => { setFilterMode(m.value); setShowDiscarded(false); }}
               aria-pressed={filterMode === m.value && !showDiscarded}
-              className={`px-3 py-1.5 rounded-full text-[11px] font-black min-h-[36px] ${
+              className={`px-3 py-1.5 rounded-full text-xs font-black min-h-[36px] ${
                 filterMode === m.value && !showDiscarded
                   ? 'bg-conn-deep text-white'
                   : 'bg-conn-aqua text-conn-muted'
@@ -546,7 +546,7 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
 
         {discardedPlans.length > 0 && (
           <button onClick={() => setShowDiscarded(!showDiscarded)} type="button"
-            className="mt-2.5 w-full text-center text-[11px] font-bold text-conn-muted min-h-[36px]">
+            className="mt-2.5 w-full text-center text-xs font-bold text-conn-muted min-h-[36px]">
             {showDiscarded ? "Ver planes activos" : `Ver papelera (${discardedPlans.length})`}
           </button>
         )}
@@ -560,7 +560,7 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
             }}
             type="button"
             aria-pressed={showPrevious}
-            className="mt-1 w-full text-center text-[11px] font-bold text-conn-muted min-h-[36px]"
+            className="mt-1 w-full text-center text-xs font-bold text-conn-muted min-h-[36px]"
           >
             {showPrevious ? "Ocultar anteriores" : `Anteriores retirados (${staleCount})`}
           </button>
@@ -570,7 +570,7 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
           onClick={handleResetAllForTesting}
           type="button"
           aria-label="Reset total de pruebas, borra todos los planes"
-          className="mt-1 w-full text-center text-[11px] font-bold text-red-300 min-h-[36px]"
+          className="mt-1 w-full text-center text-xs font-bold text-red-300 min-h-[36px]"
         >
           Reset total de pruebas (borra todo)
         </button>
@@ -653,55 +653,7 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
             </section>
           ))}
 
-          {showCineSection && (
-            <section aria-label="Cartelera de cine de Sevilla">
-              <div className="flex items-center gap-2.5 mb-2.5 px-1">
-                <CategoryBadge category="Cine" size={40} />
-                <div>
-                  <p className="font-theme-title text-[15px] font-black text-conn-deep">Cartelera de cine</p>
-                  <p className="text-[10px] text-conn-muted font-bold">
-                    {cineVisible.length} peli{cineVisible.length === 1 ? "" : "s"}{activeCine !== 'Todos' ? ` en ${activeCine}` : ""}
-                  </p>
-                </div>
-                <div className="flex-1 h-px bg-conn-tealDark/15 ml-1" />
-              </div>
-
-              {cineNames.length > 1 && (
-                <div className="grid grid-cols-3 gap-1.5 mb-2.5" role="group" aria-label="Filtrar por cine">
-                  {['Todos', ...cineNames].map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setActiveCine(c)}
-                      aria-pressed={activeCine === c}
-                      className={`px-2 py-1.5 rounded-full text-[11px] font-black truncate min-h-[36px] ${
-                        activeCine === c ? 'bg-conn-teal text-white' : 'bg-conn-mist text-conn-tealDark'
-                      }`}
-                    >
-                      {c === 'Todos' ? 'Todos' : shortCineName(c)}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <div className="space-y-2.5">
-                {cineVisible.map((plan) => (
-                  <PlanCard
-                    key={plan.id}
-                    plan={plan}
-                    showDiscarded={false}
-                    isExpanded={expandedId === plan.id}
-                    onToggle={toggleExpanded}
-                    onToggleInterest={handleToggleInterest}
-                    onToggleForToday={handleToggleForToday}
-                    onDiscard={handleDiscardPlan}
-                    onRestore={handleRestorePlan}
-                    todayKey={todayKey}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
+          {/* La cartelera vive ahora en la pestaña Cine. */}
 
           {travelMinutes !== UNLIMITED_TRAVEL && unknown.length > 0 && !showDiscarded && activeCategory === 'Todas' && (
             <section aria-label="Distancia por calcular">

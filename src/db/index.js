@@ -51,6 +51,59 @@ db.version(4)
     }
   });
 
+// v5: tablas de recomendaciones (series, pelis, sitios para comer) con el
+// mismo modelo userStatus/feedStatus que los planes (favorito/papelera).
+db.version(5).stores({
+  preferences: 'key',
+  plans: 'id, travelMinutes, status, userStatus, feedStatus, isForToday, todaySelectionDate, expiresAt',
+  tasks: 'id, category, active, status, lastDoneAt',
+  purchases: 'id, status, reviewDate, createdAt',
+  decisions: 'id, status, reviewDate, createdAt',
+  feedMeta: 'key',
+  series: 'id, status, userStatus, feedStatus',
+  movies: 'id, status, userStatus, feedStatus',
+  places: 'id, status, userStatus, feedStatus'
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RECOMENDACIONES: helpers genéricos (series / movies / places)
+// ─────────────────────────────────────────────────────────────────────────────
+const RECO_TABLES = ['series', 'movies', 'places'];
+
+export async function getVisibleRecos(table) {
+  const all = await db.table(table).toArray();
+  return all.filter((r) => {
+    if (!r) return false;
+    if (r.userStatus === 'discarded' || r.status === 'discarded') return false;
+    if (r.feedStatus === 'expired' || r.feedStatus === 'removed') return false;
+    return true;
+  });
+}
+
+export async function toggleRecoInterest(table, id) {
+  const rec = await db.table(table).get(id);
+  if (!rec) return false;
+  const interested = rec.userStatus === 'interested' || (!rec.userStatus && rec.status === 'interested');
+  if (interested) {
+    await db.table(table).update(id, { userStatus: 'new', status: 'available', interestedAt: null });
+    return false;
+  }
+  await db.table(table).update(id, { userStatus: 'interested', status: 'interested', interestedAt: Date.now(), lastSeenAt: Date.now() });
+  return true;
+}
+
+export async function discardReco(table, id) {
+  await db.table(table).update(id, {
+    userStatus: 'discarded', status: 'discarded', discardedAt: Date.now()
+  });
+}
+
+export async function restoreReco(table, id) {
+  await db.table(table).update(id, {
+    userStatus: 'new', status: 'available', discardedAt: null, feedStatus: 'active'
+  });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // CATÁLOGO LOCAL ESTÁTICO DE TAREAS DOMÉSTICAS (17 tareas en 3 categorías)
 // ─────────────────────────────────────────────────────────────────────────────

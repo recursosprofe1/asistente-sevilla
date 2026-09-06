@@ -16,6 +16,11 @@
   --color-amber: #F5A623;
 }
 
+/* Letra un poco más grande en toda la app (base rem) */
+html {
+  font-size: 17px;
+}
+
 body, .theme-transition {
   background-color: var(--color-bg);
   color: var(--color-ink);

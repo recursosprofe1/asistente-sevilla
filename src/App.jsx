@@ -3,9 +3,9 @@ import { db, initializeDatabase } from "./db";
 import BottomNavigation from "./components/BottomNavigation";
 import HoyTab from "./components/tabs/HoyTab";
 import PlanesTab from "./components/tabs/PlanesTab";
-import CasaTab from "./components/tabs/CasaTab";
-import ComprasTab from "./components/tabs/ComprasTab";
-import DecisionesTab from "./components/tabs/DecisionesTab";
+import CineTab from "./components/tabs/CineTab";
+import ComerTab from "./components/tabs/ComerTab";
+// Casa/Compras/Decisiones ocultas de momento (código intacto, sin usar).
 
 import { FBadge } from "./components/illustrations/NotoBadges";
 
@@ -80,9 +80,8 @@ export default function App() {
                   onNavigateTab={(tab) => setActiveTab(tab)}
                 />
               )}
-              {activeTab === "casa" && <CasaTab />}
-              {activeTab === "compras" && <ComprasTab />}
-              {activeTab === "decisiones" && <DecisionesTab />}
+              {activeTab === "cine" && <CineTab />}
+              {activeTab === "comer" && <ComerTab />}
             </>
           )}
         </main>

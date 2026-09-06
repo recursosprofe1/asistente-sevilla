@@ -3,6 +3,7 @@
 // (planes con category/longDescription + cine.peliculas).
 
 import { normalizeCategory } from '../utils/planCategories';
+import { normalizeSerie, normalizeMovie, normalizePlace, syncRecosFromFeed } from './recoService';
 
 // Sugerencias locales de compras (100% local, sin red). Las usa ComprasTab.
 const LOCAL_SUGGESTIONS = [
@@ -366,6 +367,19 @@ export async function syncPlansFromCloud(db, { signal } = {}) {
 
       await db.plans.bulkPut(toPut);
 
+      // Series, pelis y sitios: mismo cuidado con favorito/papelera.
+      let recoSummary = '';
+      try {
+        const rS = await syncRecosFromFeed(db, 'series', normalizeSerie, data?.series);
+        const rM = await syncRecosFromFeed(db, 'movies', normalizeMovie, data?.movies);
+        const rP = await syncRecosFromFeed(db, 'places', normalizePlace, data?.places);
+        const parts = [];
+        if ((rS.added + rM.added + rP.added) > 0) parts.push(`${rS.added + rM.added + rP.added} recos nuevas`);
+        recoSummary = parts.join(' · ');
+      } catch {
+        // Tablas aún sin migrar (v5 pendiente): no bloquea el sync de planes.
+      }
+
       let prevMeta = null;
       try {
         prevMeta = await db.table('feedMeta').get('plans');
@@ -388,7 +402,7 @@ export async function syncPlansFromCloud(db, { signal } = {}) {
         // Instalaciones sin tabla feedMeta hasta migrar: no es crítico.
       }
 
-      return { success: true, count: toPut.length, added, updated, unchanged, stale, expired, feedHash, generatedAt: meta.generatedAt, validUntil: meta.validUntil };
+      return { success: true, count: toPut.length, added, updated, unchanged, stale, expired, feedHash, generatedAt: meta.generatedAt, validUntil: meta.validUntil, recoSummary };
     } catch (err) {
       if (err?.name === 'AbortError') return { success: false, error: 'Tiempo de sincronización agotado. Se conserva la caché anterior.', aborted: true };
       return { success: false, error: err.message || 'Error de red. Se conserva la caché anterior.' };
