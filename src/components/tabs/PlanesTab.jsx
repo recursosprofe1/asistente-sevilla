@@ -1,5 +1,5 @@
-﻿import React, { useState, useEffect, useRef } from "react";
-import { FBadge, FGlyph, CategoryBadge } from "../illustrations/FlatBadges";
+import React, { useState, useEffect, useRef } from "react";
+import { FBadge, FGlyph, CategoryBadge } from "../illustrations/NotoBadges";
 import { db, discardPlan, restorePlan, getFeedMeta } from "../../db";
 import { syncPlansFromCloud } from "../../services/feedService";
 import {
@@ -37,7 +37,7 @@ function diasRestantesEnPapelera(plan) {
   return Math.max(0, 7 - Math.floor(diff / (1000 * 60 * 60 * 24)));
 }
 
-// ── Tarjeta individual ──────────────────────────
+// -- Tarjeta individual --------------------------
 function PlanCard({
   plan, showDiscarded, isExpanded, onToggle,
   onToggleInterest, onToggleForToday, onDiscard, onRestore, todayKey
@@ -72,7 +72,7 @@ function PlanCard({
             )}
             <div className="flex items-center gap-1 mt-1.5 text-[11px] font-bold text-conn-muted">
               <FBadge name="pin" color="#0E7E8C" size={20} />
-              <span className="truncate">{plan.venue}{plan.municipality ? ` · ${plan.municipality}` : ""}</span>
+              <span className="truncate">{plan.venue}{plan.municipality ? `· ${plan.municipality}` : ""}</span>
             </div>
             {!showDiscarded && (isInterested || isForToday) && (
               <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
@@ -152,7 +152,7 @@ function PlanCard({
                 : "bg-conn-mist text-conn-tealDark"
             }`}
           >
-            <FBadge name="sol" color="#F5A623" size={22} />
+            <FBadge name="calendario-add" color="#F5A623" size={22} />
             {isForToday ? "En Hoy" : "Añadir a Hoy"}
           </button>
         </div>
@@ -202,7 +202,7 @@ function PlanCard({
   );
 }
 
-// ── Botón circular de categoría: insignia con sombra larga + etiqueta ──
+// -- Botón circular de categoría: insignia con sombra larga + etiqueta --
 function CategoryCircle({ label, active, onClick, category }) {
   return (
     <button type="button" onClick={onClick} aria-pressed={active} className="conn-circle-btn">
@@ -230,7 +230,7 @@ function shortCineName(venue) {
   return v.length > 14 ? v.slice(0, 13) + '…' : (v || 'Cine');
 }
 
-// ── Tab principal ─────────────────────────────────────────────
+// -- Tab principal ---------------------------------------------
 export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
   const [plans, setPlans] = useState([]);
   const [discardedPlans, setDiscardedPlans] = useState([]);
@@ -470,6 +470,7 @@ export default function PlanesTab({ travelMinutes, setTravelMinutes }) {
           <p>Generado por el feed: {feedMeta?.generatedAt || 'sin dato'}</p>
           <p>Válido hasta: {feedMeta?.validUntil || 'sin dato'}</p>
           <p>Hash del feed: {feedMeta?.feedHash ? String(feedMeta.feedHash).slice(0, 12) : 'sin dato'}</p>
+          <p>Iconos: Noto Emoji (Google), Apache 2.0</p>
           <p>Versión de esquema: {feedMeta?.schemaVersion ?? 'sin dato'}</p>
         </div>
       </details>

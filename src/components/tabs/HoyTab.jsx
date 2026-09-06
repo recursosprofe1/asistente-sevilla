@@ -1,5 +1,5 @@
-﻿import React, { useState, useEffect, useRef } from "react";
-import { FBadge, FGlyph, CategoryBadge } from "../illustrations/FlatBadges";
+import React, { useState, useEffect, useRef } from "react";
+import { FBadge, FGlyph, CategoryBadge } from "../illustrations/NotoBadges";
 import { db, discardPlan, togglePlanForToday } from "../../db";
 import { getTodayPlans } from "../../services/planRepository";
 import { getTodayKeyMadrid, formatLongDateMadrid, getGreetingMadrid } from "../../utils/time";
@@ -66,7 +66,7 @@ export default function HoyTab({ onNavigateTab }) {
 
   return (
     <div className="space-y-3 pb-28 pt-1">
-      {/* ── Hero ─────────────────────────── */}
+      {/* -- Hero --------------------------- */}
       <div className="conn-hero px-5 pt-5 pb-5 text-white">
         <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-white/80 mb-1">
           {greeting}
@@ -81,7 +81,7 @@ export default function HoyTab({ onNavigateTab }) {
         </p>
       </div>
 
-      {/* ── Toast ───────────────────────────────────────── */}
+      {/* -- Toast ----------------------------------------- */}
       {toast && (
         <div
           role="status"
@@ -93,7 +93,7 @@ export default function HoyTab({ onNavigateTab }) {
         </div>
       )}
 
-      {/* ── Lista de tarjetas (sin límite) ────────────────────────────── */}
+      {/* -- Lista de tarjetas (sin límite) ------------------------------ */}
       <div className="space-y-2.5">
         {isLoading && (
           <div className="text-center py-12 px-4" role="status" aria-live="polite">
@@ -178,7 +178,7 @@ export default function HoyTab({ onNavigateTab }) {
                   )}
                 </button>
 
-                {/* ── Detalle expandido ─────────────────────── */}
+                {/* -- Detalle expandido ----------------------- */}
                 {isExpanded && (
                   <div id={`hoy-detalle-${plan.id}`} className="border-t border-conn-aqua px-4 py-3 space-y-3">
                     {plan.startsAt && (

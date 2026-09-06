@@ -1,5 +1,5 @@
 import React from 'react';
-import { FBadge, FGlyph } from '../illustrations/FlatBadges';
+import { FBadge, FGlyph } from '../illustrations/NotoBadges';
 
 export function CineMovies({ longDescription }) {
   let peliculas = null;

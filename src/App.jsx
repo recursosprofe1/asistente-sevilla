@@ -7,7 +7,7 @@ import CasaTab from "./components/tabs/CasaTab";
 import ComprasTab from "./components/tabs/ComprasTab";
 import DecisionesTab from "./components/tabs/DecisionesTab";
 
-import { FBadge } from "./components/illustrations/FlatBadges";
+import { FBadge } from "./components/illustrations/NotoBadges";
 
 // ── Icono de la app: brújula maciza ───────────────────
 function AppIcon({ size = 32 }) {

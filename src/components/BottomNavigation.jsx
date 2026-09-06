@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavBadge } from './illustrations/FlatBadges';
+import { NavBadge } from './illustrations/NotoBadges';
 
 export const TABS = [
   { id: 'hoy', label: 'Hoy' },

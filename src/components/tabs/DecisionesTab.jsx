@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FBadge, FGlyph } from '../illustrations/FlatBadges';
+import { FBadge, FGlyph } from '../illustrations/NotoBadges';
 import { db, addDeferredDecision, updateDecisionStatus } from '../../db';
 
 export default function DecisionesTab() {
